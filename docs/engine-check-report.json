@@ -1,0 +1,14 @@
+{
+  "mode": "source syntax and browser-free original test subset",
+  "tests": 37,
+  "passed": 37,
+  "assertions": 11753,
+  "fileBytes": 205244,
+  "failures": [],
+  "notRun": [
+    "Browser layout",
+    "Real pointer and keyboard input",
+    "AudioContext scheduling integration",
+    "Device or audible sound checks"
+  ]
+}

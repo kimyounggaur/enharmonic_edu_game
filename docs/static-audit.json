@@ -1,0 +1,13 @@
+{
+  "file_bytes": 205244,
+  "runtime_files": [
+    "index.html"
+  ],
+  "external_asset_attributes": [],
+  "external_css_urls": [],
+  "external_script_tags": 0,
+  "setInterval_outside_tests": 0,
+  "setTimeout_outside_tests": 1,
+  "Math_random_review_generator": false,
+  "forbidden_phrases_outside_tests": []
+}

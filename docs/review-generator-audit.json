@@ -1,0 +1,14 @@
+{
+  "material": 56,
+  "combinations": 180,
+  "jobs": 1080,
+  "allocation": [
+    "octave",
+    "octave",
+    "octave",
+    "dir",
+    "dir",
+    "dir"
+  ],
+  "failures": []
+}

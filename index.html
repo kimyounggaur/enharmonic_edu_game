@@ -1,0 +1,2626 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>두 이름의 음악 마을</title>
+<style>
+:root{
+  --counter:#e8eef2; --panel:#ffffff; --line:#cbd6de; --ink:#1a2630; --ink-2:#4b5b68;
+  --road:#dde6ec; --wall:#fffdf8; --wall-edge:#84929e; --dark:#26323d;
+  --lit:#ffd35c; --steel:#17627e; --steel-soft:#dcedf4;
+  --good:#256f43; --warn:#8f5000; --bad:#ab3626;
+  --sp:10px; --keyH:100px; --cardH:56px; --gap:8px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;background:var(--counter);color:var(--ink);
+  word-break:keep-all;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;overflow:hidden}
+button{font:inherit;color:inherit;margin:0;touch-action:manipulation}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* 틀: 다섯 줄. 넷은 높이가 고정이고 무대만 늘어난다 */
+#app{height:100vh;height:100dvh;max-width:720px;margin:0 auto;padding:var(--gap) 8px;display:grid;grid-template-rows:44px var(--cardH) minmax(0,1fr) 40px 104px;gap:var(--gap)}
+#app[data-mode="narrow"]{--cardH:50px;--gap:6px}
+body.is-low{overflow:auto}
+body.is-low #app{height:545px}
+
+/* HUD */
+#hud{display:flex;align-items:center;gap:8px;min-width:0}
+#dots{display:flex;gap:4px;flex:1;min-width:0}
+#dots i{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--ink-2);flex:none}
+#dots i.is-now{border-color:var(--steel);box-shadow:0 0 0 2px var(--steel-soft)}
+#dots i.is-full{background:var(--ink);border-color:var(--ink)}
+#dots i.is-half{background:linear-gradient(90deg,var(--ink) 50%,transparent 50%);border-color:var(--ink)}
+#soundChip{height:44px;padding:0 12px;border-radius:22px;border:1.5px solid var(--warn);background:var(--panel);color:var(--warn);font-size:13px;font-weight:700;white-space:nowrap}
+#exitBtn{height:44px;min-width:56px;padding:0 10px;border-radius:8px;border:1.5px solid var(--ink-2);background:var(--panel);font-size:13px;font-weight:700;white-space:nowrap}
+
+/* 편지 카드 */
+#card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0 10px;display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden}
+#chip{flex:none;font-size:12px;font-weight:700;color:var(--steel);background:var(--steel-soft);border-radius:6px;padding:3px 7px;white-space:nowrap}
+#ask{margin:0;font-size:15px;line-height:1.3;font-weight:600}
+#app[data-mode="narrow"] #ask{font-size:14px}
+
+/* 주소 글자와 기호 */
+.nm{white-space:nowrap;font-weight:700}
+.nm .oc{color:var(--ink-2);margin-left:.04em}
+#envName .oc{font-size:.8em}
+.sg{display:inline-block;height:1.05em;width:auto;vertical-align:-.2em;margin:0 .04em;overflow:visible}
+.sg2{vertical-align:.08em}
+
+/* 무대 */
+#stage{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:0;overflow:hidden;align-self:center;width:100%;height:100%}
+#sheet{display:flex;gap:8px;height:calc(var(--sp) * 9.6);flex:none}
+#envelope{flex:none;width:88px;border:1.5px solid var(--line);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--counter)}
+#envLabel{font-size:12px;color:var(--ink-2)}
+#envName{font-size:26px;line-height:1.15}
+#envNote{font-size:12px;color:var(--ink-2);min-height:14px}
+#staff{flex:1;min-width:0;height:100%;display:block}
+#staff .ln{stroke:var(--ink-2);stroke-width:1}
+#staff .clef path{fill:none;stroke:var(--ink);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#staff .clef circle{fill:var(--ink)}
+#staff .note{color:var(--ink)}
+#staff .hd{fill:currentColor}
+#staff .hole{fill:var(--panel)}
+#staff .note.is-ghost{color:var(--steel)}
+#staff .note.is-ghost .hd{fill:none;stroke:currentColor;stroke-width:1.6;stroke-dasharray:3 2}
+#staff .note.is-ghost .hole{fill:none}
+#staff .note.is-lit{color:var(--steel)}
+#staff .mark{fill:var(--lit);stroke:var(--ink);stroke-width:1}
+.gl{fill:currentColor;stroke:none}
+.gs{fill:none;stroke:currentColor}
+
+/* 길: 문패 판, 걸음, 집, 구역 */
+#street{flex:none;position:relative}
+#boardRow{height:28px;position:relative}
+#board{position:absolute;top:0;height:26px;display:flex;gap:4px;align-items:stretch}
+.plate{min-width:40px;padding:0 6px;border:1.5px solid var(--ink);border-radius:5px;background:var(--panel);font-size:13px;display:flex;align-items:center;justify-content:center}
+.plate.is-lit{background:var(--lit)}
+.slot{min-width:30px;border:1.5px dashed var(--ink-2);border-radius:5px;color:var(--ink-2);font-size:13px;display:flex;align-items:center;justify-content:center}
+#routeRow{height:26px;position:relative}
+#routes{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#routes path{fill:none;stroke-width:2.2;stroke-linecap:round}
+#routes .r-live{stroke:var(--steel);color:var(--steel)}
+#routes .r-mine{stroke:var(--warn);color:var(--warn);stroke-dasharray:5 3}
+#routes .r-goal{stroke:var(--good);color:var(--good)}
+#routes .r-done{stroke:var(--good);color:var(--good)}
+#routes .r-done.is-lit{stroke-width:3.4}
+#routes polygon,#routes circle{fill:currentColor;stroke:none}
+#pin{position:absolute;bottom:1px;width:18px;height:18px;margin-left:-9px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--steel);border:2px solid var(--panel);box-shadow:0 0 0 1px var(--steel);pointer-events:none}
+#houses{position:relative;height:var(--keyH);background:var(--road);border-radius:4px}
+#pin.is-idle{background:var(--panel);box-shadow:0 0 0 2px var(--steel);border-color:var(--panel)}
+.house{position:absolute;top:0;padding:0;border-radius:0 0 5px 5px;cursor:pointer}
+.wh{height:100%;background:var(--wall);border:1px solid var(--wall-edge);display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:5px;z-index:1}
+.wh b{font-size:14px;line-height:1.1}
+.wh span{font-size:12px;line-height:1.1;color:var(--ink-2)}
+.bk{height:60%;background:var(--dark);border:1px solid var(--dark);z-index:2}
+.bk::before{content:"";position:absolute;inset:0 -15% 0 -15%}
+.house.is-edge{border-left:3px solid var(--ink)}
+.house.is-from{box-shadow:inset 0 0 0 3px var(--steel-soft),inset 0 0 0 4px var(--steel)}
+.wh.is-goal{background:repeating-linear-gradient(135deg,var(--lit) 0 6px,#ffe08a 6px 12px)}
+.bk.is-goal{background:repeating-linear-gradient(135deg,var(--dark) 0 5px,#55616d 5px 10px);border-color:var(--lit);box-shadow:inset 0 0 0 2px var(--lit)}
+.house.is-here{outline:3px solid var(--steel);outline-offset:-3px}
+.bk.is-here{outline-color:var(--lit);z-index:3}
+.house:focus-visible{outline:3px solid var(--ink);outline-offset:-3px;z-index:4}
+#zones{height:18px;position:relative}
+#zones span{position:absolute;top:2px;height:16px;font-size:12px;line-height:16px;text-align:center;color:var(--ink-2);border-top:2px solid var(--ink-2);white-space:nowrap;overflow:hidden}
+#zones span + span{border-left:3px solid var(--ink)}
+
+/* 판독 줄 */
+#readout{margin:0;height:40px;display:flex;align-items:center;font-size:13.5px;line-height:1.35;padding:0 4px;overflow:hidden}
+#readout.is-good{color:var(--good)} #readout.is-warn{color:var(--warn)} #readout.is-bad{color:var(--bad)}
+#readout .nm .oc{color:inherit}
+
+/* 조작부: 44px 줄 + 52px 줄 */
+#controls{display:grid;grid-template-rows:44px 52px;gap:8px}
+.set{display:flex;gap:6px;height:44px}
+.set[hidden]{display:none}
+.set button{flex:1;min-width:0;height:44px;border:1.5px solid var(--ink-2);border-radius:8px;background:var(--panel);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:4px;padding:0 2px}
+.set button:disabled{opacity:.38}
+.set button[aria-pressed="true"]{background:var(--steel-soft);border-color:var(--steel);box-shadow:inset 0 0 0 1.5px var(--steel)}
+.set button.is-off{text-decoration:line-through}
+#setSign button{flex-direction:column;gap:0}
+#setSign button i{font-style:normal;font-size:12px;line-height:1.15;letter-spacing:-.5px;color:var(--ink-2)}
+#setSign button .sg{font-size:19px;vertical-align:0}
+#setSign button .sg2{margin:3px 0 3px}
+#setSign button .sg0{font-size:15px;line-height:19px;font-weight:700}
+#setCards button{font-size:16px}
+.arw{width:12px;height:12px;flex:none}
+#rowB{display:flex;gap:8px}
+#main{flex:1;height:52px;border:0;border-radius:10px;background:var(--steel);color:#fff;font-size:17px;font-weight:700}
+#main:disabled{background:var(--line);color:var(--ink-2)}
+
+/* 겹쳐 뜨는 화면 */
+.sheet{position:fixed;inset:0;background:rgba(232,238,242,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;text-align:center;z-index:20}
+.sheet[hidden]{display:none}
+.sheet h2{margin:0;font-size:18px}
+.sheet p{margin:0;font-size:14px;line-height:1.5;max-width:300px}
+.sheet ol{margin:0;padding:0;list-style:none;font-size:13px;line-height:1.7;text-align:left}
+.sheet button{height:48px;padding:0 20px;border:0;border-radius:10px;background:var(--steel);color:#fff;font-size:16px;font-weight:700}
+.sheet button.is-plain{background:var(--panel);color:var(--ink);border:1.5px solid var(--ink-2)}
+.rec{display:inline-block;width:10px;height:10px;border-radius:50%;border:1.5px solid var(--ink);margin-right:6px;vertical-align:-1px}
+.rec.is-full{background:var(--ink)} .rec.is-half{background:linear-gradient(90deg,var(--ink) 50%,transparent 50%)}
+@media (prefers-reduced-motion:no-preference){#pin{transition:left .12s ease-out}}
+#testPage{justify-content:flex-start;align-items:stretch;text-align:left;overflow:auto;z-index:30}
+#testPage p{max-width:none;font-weight:700}
+#testList li.is-fail{color:var(--bad)}
+#testList small{color:var(--ink-2)}
+#testList em{font-style:normal;font-size:12px}
+.wh.is-near{box-shadow:inset 0 -6px 0 var(--lit)}
+#mapScreen{justify-content:flex-start;overflow:auto;gap:10px;background:var(--counter)}
+#mapList{width:100%;max-width:340px;display:flex;flex-direction:column;gap:6px}
+#mapList button{width:100%;height:auto;min-height:48px;padding:5px 14px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;text-align:left;font-size:15px;line-height:1.3}
+#mapList button small{font-size:12px;font-weight:400}
+#mapList button:disabled{background:var(--panel);color:var(--ink-2);border:1.5px dashed var(--ink-2)}
+#mapTests{font-size:12px;color:var(--ink-2)}
+/* P20–P26: 화면과 기록을 잇는 확장 */
+.village-sheet{background:var(--counter);gap:12px;max-width:100%;color:var(--ink)}
+.village-sheet h1{font-size:clamp(2.4rem,8vw,3.7rem);line-height:1.14;margin:0;letter-spacing:-.065em}
+.village-sheet .eyebrow{font-size:13px;font-weight:700;letter-spacing:.04em;color:var(--steel)}
+.village-sheet .small-note{font-size:12px;color:var(--ink-2)}
+.title-art{width:min(280px,65vw);max-height:150px}.title-art svg{display:block;width:100%;height:100%;max-height:150px}
+#startBtn{width:min(310px,100%);height:56px;font-size:18px}.title-tools{display:flex;gap:8px;width:min(340px,100%)}.title-tools button{flex:1;padding:0 8px;font-size:14px}
+.sheet-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.sound-art{width:100px;height:80px;color:var(--steel)}
+.scrolling{display:block;overflow-y:auto;overflow-x:hidden;padding:16px max(12px,calc((100vw - 680px)/2));text-align:left}.scrolling>p{margin:10px auto;max-width:none;text-align:center}
+.sheet-head{display:grid;grid-template-columns:64px 1fr 64px;align-items:center;gap:8px;margin-bottom:16px}.sheet-head h2{text-align:center}.sheet-head button{padding:0 8px;font-size:14px}
+#bookWalk{display:block;width:100%;height:44px;margin-bottom:8px}#bookHouses{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.book-house{border:1.5px solid var(--wall-edge);border-radius:8px;overflow:hidden;background:var(--wall);padding:6px;min-width:0}.book-house.is-black{border-top:9px solid var(--dark)}.book-house.is-white{border-top:9px solid var(--steel-soft)}.book-house h3{font-size:12px;margin:0 0 6px;color:var(--ink-2)}.book-house button{width:100%;min-height:44px;height:auto;padding:5px 2px;background:var(--panel);color:var(--ink);border:1px solid var(--wall-edge);font-size:16px;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}.book-house button:disabled{border-style:dashed;background:transparent;color:var(--ink-2);opacity:1}.book-house button small{display:block;width:100%;font-size:12px;font-weight:400}.book-section{padding:18px 0;border-top:1px solid var(--line);margin-top:16px}.book-section h3,.settings-body h3{font-size:16px;margin:0 0 10px}.book-section p{font-size:14px;margin:0 0 10px;line-height:1.5;max-width:none}.know-card{padding:12px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:var(--panel);font-size:14px;line-height:1.45}.sign-names{display:grid;grid-template-columns:1fr 1fr;gap:10px}.sign-names span{display:flex;align-items:center;gap:6px;min-height:44px}.sign-names small{font-size:12px}#bookScenes{display:grid;grid-template-columns:1fr 1fr;gap:8px}#bookScenes button{min-height:48px;height:auto;font-size:13px;padding:7px}#bookScenes button:disabled{background:transparent;color:var(--ink-2);border:1px dashed var(--ink-2)}
+.settings-body{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:12px;font-size:15px}.settings-body>p{max-width:none;font-size:14px}.settings-body label{font-size:16px}.settings-body input[type=range]{width:100%;min-height:44px;accent-color:var(--steel)}.check-row{display:flex;align-items:center;gap:10px;min-height:44px}.check-row input{width:24px;height:24px;accent-color:var(--steel)}.settings-body select{height:48px;border:1.5px solid var(--ink-2);border-radius:8px;background:var(--panel);font:inherit;padding:0 12px;color:var(--ink)}#volumeValue{float:right}#settingsTests{overflow-wrap:anywhere;font-size:12px;line-height:1.6}#settingsFails{padding-left:20px;font-size:13px;margin:0}#resetConfirm{padding:12px;border:1.5px solid var(--bad);border-radius:10px}#resetConfirm p{margin-bottom:10px}#resetConfirm button{margin:0 6px 0 0}.map-nav{display:flex;gap:8px;width:100%;max-width:340px;justify-content:space-between}.map-nav button{min-width:70px;font-size:14px}#futureDays{width:100%;max-width:340px;border:1.5px dashed var(--wall-edge);border-radius:10px;padding:9px 12px}#futureDays p{font-size:12px;color:var(--ink-2);text-align:left;line-height:1.6}.stamp-art{height:24px;width:24px;float:right;flex:none}#closing{overflow:auto;justify-content:flex-start;padding-top:24px}#closeList{max-width:500px;align-self:center}#closeNote .nm{display:inline-flex;align-items:center;min-height:26px;padding:1px 5px;background:var(--wall);border:1px solid var(--wall-edge);border-radius:4px;margin-top:4px}#closeStamp{width:64px;height:64px;flex:none}
+#hudSettings{width:44px;height:44px;min-width:44px;border:1.5px solid var(--ink-2);border-radius:8px;background:var(--panel);display:flex;align-items:center;justify-content:center;padding:9px}#hudSettings svg{width:24px;height:24px}#hud{gap:5px}#soundChip{padding:0 6px;font-size:12px}#exitBtn{min-width:44px;padding:0 6px;font-size:12px}#dots{gap:3px}#dots i{width:8px;height:8px}#muteBadge:not(.sr){font-size:12px;white-space:nowrap}#sceneBook{height:44px;min-width:100px;border:1.5px solid var(--steel);border-radius:8px;background:var(--panel);color:var(--steel);font-size:14px}#setListen{gap:6px}#freeMode{font-size:13px}#app[data-free="true"] #dots{visibility:hidden}#app[data-free="true"] #exitBtn{visibility:visible}
+@media(min-width:600px){#bookHouses{grid-template-columns:repeat(4,minmax(0,1fr))}.title-art{max-height:180px}}
+@media(max-height:620px){#titleScreen{gap:10px}.title-art{max-height:104px}.village-sheet h1{font-size:2.5rem}.sound-art{width:72px;height:58px}}
+
+/* 마을 그림은 누르는 자리와 건반의 간격을 바꾸지 않는다. */
+body{background:#dcebf1;background-image:radial-gradient(ellipse at 15% 5%,#ffffffa8 0,transparent 43%),linear-gradient(180deg,#dcebf1,#edf3ef)}
+#stage{background-color:#f9fcfd;background-image:radial-gradient(ellipse at 12% 6%,#ffffff 0,transparent 38%),linear-gradient(180deg,#e8f3f8 0%,#f9fcfd 40%,#f9fcfd 100%);box-shadow:0 3px 0 #cad9df}
+#stage::before{content:"";position:absolute;pointer-events:none}
+#card{border-color:#b7cbd4;box-shadow:0 2px 0 #d2dfe5}
+#envelope{position:relative;isolation:isolate;background:#f5f9fc;border-color:#9fb7c5;overflow:hidden}
+#envelope::before{content:"";position:absolute;inset:0;background:linear-gradient(32deg,transparent 49%,#c6d5de 49.7%,#c6d5de 50.6%,transparent 51.3%),linear-gradient(-32deg,transparent 49%,#c6d5de 49.7%,#c6d5de 50.6%,transparent 51.3%);opacity:.35;z-index:-1}
+#envName,#envNote,#envLabel{position:relative;background:#f5f9fcdd;border-radius:3px}
+#houses{background:linear-gradient(#d1e0e4 0 64%,#c5d5d2 64% 100%);box-shadow:0 4px 0 #b0c4c8}
+.wh{border-radius:3px 3px 5px 5px}
+.house .house-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1}
+.house{isolation:isolate}
+.house b,.house span{position:relative}
+.wh b{background:#fffdf8ed;padding:1px 4px;border-radius:3px 3px 0 0}
+.wh span{background:#fffdf8ed;padding:0 4px 1px;border-radius:0 0 3px 3px}
+.bk{border-radius:2px 2px 4px 4px;box-shadow:0 3px 0 #16242f}
+.house.is-here .house-art{opacity:.75}
+.house.is-goal .house-art{opacity:.45}
+.house.is-from .house-art{opacity:.7}
+.plate{background:linear-gradient(#fbf5e8,#f1e7d5);border-color:#776952;box-shadow:0 2px 0 #c9bea8;position:relative;padding-left:8px;padding-right:8px}
+.plate::before,.plate::after{content:"";position:absolute;top:50%;width:2px;height:2px;border-radius:50%;background:#776952}
+.plate::before{left:2px}.plate::after{right:2px}
+.plate.is-lit{background:var(--lit)}
+.slot{position:relative;font-size:0;background:#fffaf0;border-color:#9b8c70}
+.slot::before,.slot::after{content:"";position:absolute;top:50%;width:3px;height:3px;border-radius:50%;background:#9b8c70}
+.slot::before{left:6px}.slot::after{right:6px}
+#pin{width:26px;height:26px;bottom:0;margin-left:-13px;transform:none;border:0;border-radius:0;background:none;box-shadow:none;transition:none;z-index:5;animation:courier-step 120ms ease-out}
+#pin svg{display:block;width:100%;height:100%;overflow:visible}
+#pin.is-idle{background:none;border:0;box-shadow:none;opacity:.65}
+#pin.is-idle .courier-coat{fill:#fff;stroke-dasharray:2 1}
+#pin .courier-eye{fill:var(--ink)}
+#pin.is-joy .courier-eye{fill:none;stroke:var(--ink);stroke-width:1.2}
+#pin.is-think .courier-mouth{d:path("M11 13q2 -1 3 0")}
+#zones span{border-top-color:#6a8493;background:#ffffff9c;border-radius:0 0 3px 3px}
+#zones span+span::before{content:"";position:absolute;top:0;left:0;width:5px;height:8px;background:#6a8493;clip-path:polygon(0 0,100% 0,100% 75%,50% 100%,0 75%)}
+.title-art{width:min(94vw,380px);height:clamp(100px,21vh,190px);margin:0 auto;flex:none;pointer-events:none}
+.title-art svg{width:100%;height:100%;display:block}
+#titleScreen{background:radial-gradient(ellipse at 50% 12%,#fff 0%,#e9f3f7 58%,#dcebf1 100%)}
+#mapScreen{background:linear-gradient(180deg,#edf6f9,#e4eef0)}
+#mapList button{box-shadow:0 2px 0 #cedce2}
+#main,.sheet button{box-shadow:0 3px 0 #124c63}
+#main:active,.sheet button:active{transform:translateY(1px)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #1a2630;outline-offset:3px}
+.tutorial-target{outline:3px dashed #17627e!important;outline-offset:-4px!important;box-shadow:0 0 0 2px #fff!important}
+.bk.tutorial-target{outline-color:#ffd35c!important}
+#main.tutorial-target{outline-color:#fff!important;outline-offset:-6px!important}
+.tutorial-readout{border-left:3px solid #17627e;padding-left:6px!important;background:#edf6fa}
+.plate{animation:plate-arrive 200ms ease-out}
+.house-art{transition:opacity 120ms ease-out}
+#routes g{animation:route-arrive 120ms ease-out;transform-origin:center}
+#staff .note{transition:opacity 150ms ease-out}
+#envName{animation:letter-open 250ms ease-out}
+#closing .stamp-art{animation:stamp-arrive 250ms ease-out}
+@keyframes courier-step{from{transform:translateX(var(--courier-dx,0)) translateY(-2px)}to{transform:translateX(0) translateY(0)}}
+@keyframes plate-arrive{from{transform:translateY(-4px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes route-arrive{from{transform:scaleY(.65);opacity:.3}to{transform:scaleY(1);opacity:1}}
+@keyframes letter-open{from{transform:translateY(3px);opacity:.5}to{transform:translateY(0);opacity:1}}
+@keyframes stamp-arrive{from{transform:scale(1.15);opacity:.4}to{transform:scale(1);opacity:1}}
+body[data-motion="reduced"] *,body[data-motion="reduced"] *::before,body[data-motion="reduced"] *::after{animation-duration:0s!important;transition-duration:0s!important}
+@media(prefers-reduced-motion:reduce){body:not([data-motion="full"]) *,body:not([data-motion="full"]) *::before,body:not([data-motion="full"]) *::after{animation-duration:0s!important;transition-duration:0s!important}}
+body.text-large #app{grid-template-rows:44px 68px minmax(0,1fr) 60px 104px}
+body.text-large #readout{height:60px;font-size:.85rem;line-height:1.25}
+body.text-large #ask{font-size:.9rem;line-height:1.2}
+body.text-large #stage{gap:2px;padding-top:2px;padding-bottom:2px}
+body.text-large #sheet{height:calc(var(--sp)*7.6)}
+body.text-large #boardRow{height:26px}
+body.text-large #routeRow{height:24px}
+body.text-large #houses{max-height:90px}
+
+
+#hud{position:relative}#muteBadge:not(.sr){position:absolute;right:49px;top:0;font-size:12px;background:var(--panel);border-radius:4px;line-height:14px;padding:0 2px;pointer-events:none}
+[hidden]{display:none!important}
+#streetAnnounce{position:fixed;top:0;left:0}
+/* -- 스타일 끝 -- */
+</style>
+</head>
+<body>
+<div id="app" data-mode="base">
+  <header id="hud">
+    <button id="exitBtn" type="button" hidden>지도</button>
+    <span id="dots" aria-hidden="true"></span>
+    <button id="soundChip" type="button" hidden>소리 켜기</button>
+  </header>
+  <section id="card"><span id="chip"></span><p id="ask" aria-live="polite"></p></section>
+  <section id="stage" aria-label="배달 무대">
+    <div id="sheet">
+      <div id="envelope"><span id="envLabel"></span><b id="envName"></b><span id="envNote"></span></div>
+      <svg id="staff" role="img" aria-label="악보"></svg>
+    </div>
+    <div id="street">
+      <div id="boardRow"><div id="board" hidden></div></div>
+      <div id="routeRow"><svg id="routes" aria-hidden="true"></svg><div id="pin" hidden></div></div>
+      <div id="houses" role="group" aria-label="길의 집들"></div>
+      <div id="zones" aria-hidden="true"></div>
+    </div>
+  </section>
+  <p id="readout" role="status"></p>
+  <section id="controls" aria-label="조작">
+    <div id="rowA">
+      <div class="set" id="setMove">
+        <button type="button" id="goLeft"><svg class="arw" viewBox="0 0 12 12" aria-hidden="true"><path d="M9 1L2 6l7 5z" fill="currentColor"/></svg>왼쪽 한 칸</button>
+        <button type="button" id="goRight">오른쪽 한 칸<svg class="arw" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 1l7 5-7 5z" fill="currentColor"/></svg></button>
+      </div>
+      <div class="set" id="setSign" hidden></div>
+      <div class="set" id="setCards" hidden></div>
+      <div class="set" id="setCause" hidden></div>
+      <div class="set" id="setListen" hidden><button type="button" id="again">다시 듣기</button></div>
+    </div>
+    <div id="rowB"><button type="button" id="main"></button></div>
+  </section>
+</div>
+<div class="sheet" id="lowScreen" hidden>
+  <h2>화면이 낮아요</h2>
+  <p>세로로 돌리거나 창을 키워 주세요. 높이 545px부터 한 화면에 들어가요.</p>
+  <button type="button" id="goOn">그래도 계속하기</button>
+</div>
+<div class="sheet" id="testPage" hidden>
+  <h2>자가검사</h2>
+  <p id="testLine"></p>
+  <ol id="testList"></ol>
+</div>
+<div class="sheet" id="closing" hidden>
+  <h2>배달을 마쳤어요</h2>
+  <p id="closeSum"></p>
+  <p id="closeNote"></p>
+  <ol id="closeList"></ol>
+  <button type="button" id="restart">다시 배달</button>
+  <button type="button" id="toMap" class="is-plain" hidden>지도로</button>
+</div>
+<div class="sheet" id="mapScreen" hidden>
+  <h2>두 이름의 음악 마을</h2>
+  <p id="mapNote"></p>
+  <button type="button" id="mapResume" hidden></button>
+  <ol id="mapList"></ol>
+  <p id="mapTests"></p>
+</div>
+<div class="sheet village-sheet" id="titleScreen" hidden aria-label="두 이름의 음악 마을">
+  <div class="title-art" aria-hidden="true"></div><p class="eyebrow">주소는 달라도, 같은 집이에요</p>
+  <h1>두 이름의<br>음악 마을</h1><p>편지를 배달하며 같은 소리의<br>다른 이름을 만나 봐요.</p>
+  <button type="button" id="startBtn">배달 시작</button>
+  <div class="title-tools"><button type="button" id="titleBook" class="is-plain">주소록</button><button type="button" id="titleFree" class="is-plain">자유 마을</button><button type="button" id="titleSettings" class="is-plain">설정</button></div>
+  <p class="small-note">서두르지 않아도 괜찮아요. 한 칸씩 가 봐요.</p>
+</div>
+<div id="mapExtras" hidden><div class="map-nav"><button type="button" id="mapBack" data-close class="is-plain">뒤로</button><button type="button" id="mapSettings" class="is-plain">설정</button></div><div id="futureDays"><p>6단 화음 가족 이사 · 준비 중</p><p>7단 문맥에 맞는 주소 · 준비 중</p></div></div>
+<div class="sheet village-sheet" id="soundCheck" hidden>
+  <svg class="sound-art" viewBox="0 0 100 80" aria-hidden="true"><path d="M20 30h18l22-16v52L38 50H20Z" fill="currentColor"/><path d="M72 25q18 15 0 30M81 14q30 26 0 52" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+  <h2 tabindex="-1">소리가 들리나요?</h2><p id="soundNote">집의 소리를 들어 봐요. 소리 없이도 배달할 수 있어요.</p>
+  <button type="button" id="soundAgain">다시 듣기</button><div class="sheet-actions"><button type="button" id="soundYes">들려요</button><button type="button" id="soundNo" class="is-plain">안 들려요</button><button type="button" id="soundSkip" class="is-plain" hidden>그냥 시작</button></div>
+</div>
+<div class="sheet village-sheet scrolling" id="bookScreen" hidden>
+  <div class="sheet-head"><button type="button" id="bookBack" data-close class="is-plain">뒤로</button><h2 tabindex="-1">마을 주소록</h2><span></span></div>
+  <p id="bookCount"></p><p id="bookRouteText" role="status">문패를 누르면 출발 집과 걸음을 볼 수 있어요.</p><svg id="bookWalk" viewBox="0 0 280 44" aria-hidden="true"></svg>
+  <div id="bookHouses"></div><section class="book-section"><h3>알아 두기</h3><div id="bookKnow"></div></section>
+  <section class="book-section"><h3>발견 장면 다시 보기</h3><div id="bookScenes"></div></section>
+  <section class="book-section"><h3>복습 배달</h3><p id="reviewNote"></p><button type="button" id="reviewBtn">복습 배달</button><button type="button" id="reviewRecommend" class="is-plain" hidden>마감 배달 해 보기</button></section>
+</div>
+<div class="sheet village-sheet scrolling" id="settingsScreen" hidden>
+  <div class="sheet-head"><button type="button" id="settingsBack" data-close class="is-plain">뒤로</button><h2 tabindex="-1">설정</h2><span></span></div>
+  <div class="settings-body"><label for="volume">소리 크기 <output id="volumeValue"></output></label><input type="range" id="volume" min="0" max="1" step="0.05"><label class="check-row"><input type="checkbox" id="muted">음소거</label>
+  <label for="motion">동작 줄이기</label><select id="motion"><option value="system">기기 설정 따르기</option><option value="reduced">동작 줄이기</option><option value="full">동작 모두 보기</option></select>
+  <button type="button" id="tutorialReset" class="is-plain">튜토리얼 다시 보기</button><button type="button" id="soundReset" class="is-plain">소리 확인 다시 하기</button>
+  <p id="settingsNote" role="status"></p><h3>자가검사</h3><p id="settingsTests"></p><ul id="settingsFails"></ul><p id="settingsStorage"></p>
+  <button type="button" id="resetAsk" class="is-plain">데이터 초기화</button><div id="resetConfirm" hidden><p>기록을 모두 지울까요? 문패와 도장이 사라져요.</p><button type="button" id="resetYes">지우기</button><button type="button" id="resetNo" class="is-plain">취소</button></div><p class="small-note">v0.9</p></div>
+</div>
+<div class="sheet village-sheet" id="errorScreen" hidden><h2 tabindex="-1">문제가 생겼어요.</h2><p>새로고침하면 저장한 곳에서 다시 시작할 수 있어요.</p><button type="button" id="reloadBtn">새로고침</button></div>
+<div class="set" id="setFree" hidden><button type="button" id="freeLeft" aria-label="창을 왼쪽 한 집으로">이전 집들</button><button type="button" id="freeMode">써 보기</button><button type="button" id="freeRight" aria-label="창을 오른쪽 한 집으로">다음 집들</button></div>
+<button type="button" id="sceneBook" hidden>주소록 보기</button>
+<button type="button" id="hudSettings" aria-label="설정"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 2-.7 3.1-2 .9-2.8-1.4L2 8.8l2.4 2.1v2.2L2 15.2l2.5 4.2L7.3 18l2 .9L10 22h4l.7-3.1 2-.9 2.8 1.4 2.5-4.2-2.4-2.1v-2.2L22 8.8l-2.5-4.2L16.7 6l-2-.9L14 2Z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/></svg></button>
+<span id="muteBadge" class="sr">음소거</span>
+
+<div id="streetAnnounce" class="sr" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<!-- -- 화면 끝 -- -->
+<script>
+// == 1 THEORY ==
+// 이론 엔진. 순수 함수다. window, document, 소리를 부르지 않는다.
+// ═══ 두 이름의 음악 마을 · 이론 엔진 ═══
+// 이론 표는 장음계 공식 하나뿐이다. 집 번호, 주소(철자), 걸음, 화음, 음계는 모두 여기서 계산한다.
+// DOM과 오디오를 만지지 않는다. 검사 러너와 Node가 같은 글자를 그대로 부른다.
+
+// ── 집과 주소 ──
+const MAJOR = [2, 2, 1, 2, 2, 2, 1];                                    // 장음계 공식: 온 온 반 온 온 온 반
+const LETTERS = "CDEFGAB";
+const MAXA = 2;                                                         // 변화량의 한계: 더블샵(+2), 더블플랫(-2)
+const mod = (x, n) => ((x % n) + n) % n;
+const semisOf = (L) => MAJOR.slice(0, L).reduce((s, x) => s + x, 0);    // 글자의 자연음 반음값: 0 2 4 5 7 9 11
+const P = (L, a = 0, o = 4) => ({ L, a, o });                           // 주소: 글자 0~6, 변화량 -2~2, 구역(옥타브 숫자)
+const midiOf = (p) => 12 * (p.o + 1) + semisOf(p.L) + p.a;              // 집 번호(MIDI)
+const hz = (midi) => 440 * Math.pow(2, (midi - 69) / 12);               // 시리즈 고정 공식
+const stepOf = (p) => 7 * p.o + p.L;                                    // 글자 자리. 기호는 자리를 바꾸지 않는다
+const zoneOf = (midi) => Math.floor(midi / 12) - 1;                     // 집이 놓인 구역(C부터 B까지가 한 구역)
+const anchorOf = (p) => P(p.L, 0, p.o);                                 // 출발 집: 같은 글자, 같은 숫자의 흰 집
+const sameSpell = (a, b) => a.L === b.L && a.a === b.a && a.o === b.o;
+const sameHouse = (a, b) => midiOf(a) === midiOf(b);                    // 구역까지 같은 소리
+const samePc = (a, b) => mod(midiOf(a) - midiOf(b), 12) === 0;          // 구역을 무시하면 같다. 정답 판정에 쓰지 않는다
+const isEnharmonic = (a, b) => sameHouse(a, b) && !sameSpell(a, b);     // 딴이름한소리: 주소는 다르고 집은 같다
+function whiteAt(midi) {                                                // 흰 집이면 그 주소, 검은 집이면 null
+  const pc = mod(midi, 12), L = MAJOR.findIndex((_, i) => semisOf(i) === pc);
+  return L < 0 ? null : P(L, 0, (midi - pc) / 12 - 1);
+}
+const isWhite = (midi) => whiteAt(midi) !== null;
+const whiteOfStep = (step) => P(mod(step, 7), 0, Math.floor(step / 7)); // 글자 자리 → 흰 집의 주소
+const ALL_SIGNS = [0, 1, -1, 2, -2];
+function spellingsAt(midi, signs = ALL_SIGNS) {                         // 이 집의 모든 주소. 걸음 수마다 흰 집에서 출발해 본다
+  const out = [];
+  for (const a of signs) { const w = whiteAt(midi - a); if (w) out.push(P(w.L, a, w.o)); }
+  return out;
+}
+
+// ── 씨앗 글자 ↔ 주소 ──
+const ACC = ["bb", "b", "", "#", "x"];                                  // 씨앗 표기. 변화량 -2 … +2
+function parse(text) {
+  const m = /^([A-G])(bb|b|#|x|)(-?\d)$/.exec(text);
+  if (!m) throw new Error("주소 씨앗을 읽을 수 없다: " + text);
+  return P(LETTERS.indexOf(m[1]), ACC.indexOf(m[2]) - MAXA, +m[3]);
+}
+const keyOf = (p) => LETTERS[p.L] + ACC[p.a + MAXA] + p.o;
+const SIGN_CH = ["\u{1D12B}", "♭", "", "♯", "\u{1D12A}"];     // 문서와 읽기용 글자. 화면은 SVG로 그린다
+const nameTxt = (p) => LETTERS[p.L] + SIGN_CH[p.a + MAXA] + p.o;
+
+// ── 걸음 ──
+const walkOf = (p) => ({ from: midiOf(anchorOf(p)), steps: p.a, to: midiOf(p) });
+function diagnose(p, chosen) {                                          // 배달 오답의 까닭
+  const w = walkOf(p), d = chosen - w.from;
+  if (chosen === w.to) return "ok";
+  if (mod(chosen - w.to, 12) === 0) return "octave";                    // 글자와 기호는 맞고 구역이 다르다
+  if (Math.abs(d) > MAXA + 1) return "letter";                          // 출발 집(글자)부터 다르다
+  if (p.a === 0) return "extra";                                        // 기호가 없는데 걸었다
+  if (d === 0) return "stay";                                           // 글자 집에서 멈췄다
+  return Math.sign(d) === Math.sign(p.a) ? "count" : "dir";             // 걸음 수가 다르다 / 반대쪽으로 걸었다
+}
+function diagStart(p, chosen) {                                         // 출발 집 오답의 까닭
+  const w = whiteAt(chosen);
+  if (!w) return "black";
+  if (w.L === p.L && w.o === p.o) return "ok";
+  return w.L === p.L ? "octave" : "letter";
+}
+function misroute(p, kind) {                                            // 반송 편지: 잘못 걸은 길
+  const w = walkOf(p), sg = Math.sign(p.a);
+  if (kind === "stay") return { from: w.from, to: w.from };
+  if (kind === "dir") return { from: w.from, to: w.from - p.a };
+  if (kind === "count") return { from: w.from, to: w.from + sg * (MAXA + 1 - Math.abs(p.a)) };
+  const shift = 12 * (p.o - zoneOf(w.to));                              // octave: 도착 집의 구역을 주소의 숫자로 착각한 길
+  return shift ? { from: w.from + shift, to: w.to + shift } : null;
+}
+
+// ── 오선(높은음자리표). 줄은 아래부터 E4 G4 B4 D5 F5 ──
+const STAFF_BOTTOM = stepOf(P(2, 0, 4));                             // 맨 아랫줄 E4의 글자 자리
+const STAFF_TOP = STAFF_BOTTOM + 8;                                     // 맨 윗줄 F5
+function ledgers(p) {                                                   // 덧줄이 놓일 글자 자리들
+  const s = stepOf(p), out = [];
+  for (let k = STAFF_BOTTOM - 2; k >= s; k -= 2) out.push(k);
+  for (let k = STAFF_TOP + 2; k <= s; k += 2) out.push(k);
+  return out;
+}
+
+// ── 창: 길에서 화면에 보이는 흰 집 아홉 채 ──
+const WIN = 9;
+const HOME = stepOf(P(6, 0, 3));                                        // 기본 창은 B3부터 C5까지
+function windowFor(needs) {                                             // 필요한 집이 모두 들어오는 창의 첫 흰 집(글자 자리). 없으면 null
+  const lo = Math.min(...needs), hi = Math.max(...needs);
+  let s = HOME;
+  while (midiOf(whiteOfStep(s)) > lo) s--;
+  while (midiOf(whiteOfStep(s + WIN - 1)) < hi) s++;
+  return midiOf(whiteOfStep(s)) <= lo ? s : null;
+}
+const winLo = (start) => midiOf(whiteOfStep(start));
+const winHi = (start) => midiOf(whiteOfStep(start + WIN - 1));
+function xOf(midi, start) {                                             // 집의 가로 자리(창 폭 = 1). 흰 집은 칸의 가운데, 검은 집은 두 흰 집의 경계
+  const w = whiteAt(midi);
+  return w ? (stepOf(w) - start + 0.5) / WIN : (stepOf(whiteAt(midi + 1)) - start) / WIN;
+}
+
+// ── 음정과 3화음(v1.1), 음계(v1.2) ──
+const refSemis = (num) => 12 * Math.floor((num - 1) / 7) + semisOf((num - 1) % 7);     // 장·완전 음정의 반음 수
+const isPerfect = (num) => [0, 3, 4].includes((num - 1) % 7);                          // 1·4·5도 계열
+function above(p, num, q) {                                             // p에서 위로 num도, 성질 q(P M m A d)인 음의 주소. 만들 수 없으면 null
+  if ((q === "P") !== isPerfect(num) && "PMm".includes(q)) return null; // 완전은 1·4·5도에만, 장·단은 2·3·6·7도에만
+  const off = q === "A" ? 1 : q === "m" ? -1 : q === "d" ? (isPerfect(num) ? -1 : -2) : 0;
+  const w = whiteOfStep(stepOf(p) + num - 1), a = midiOf(p) + refSemis(num) + off - midiOf(w);
+  return Math.abs(a) > MAXA ? null : P(w.L, a, w.o);
+}
+const TRIAD = { maj: ["M", "P"], min: ["m", "P"], dim: ["m", "d"], aug: ["M", "A"] };  // 3화음 공식: 3음과 5음의 성질
+function triad(root, kind) {                                            // 밑음, 3음, 5음의 주소. 겹임시표를 넘으면 null
+  const t = above(root, 3, TRIAD[kind][0]), f = above(root, 5, TRIAD[kind][1]);
+  return t && f ? [root, t, f] : null;
+}
+const isStacked = (notes) => notes.every((n, i) => i === 0 || stepOf(n) - stepOf(notes[i - 1]) === 2);   // 글자를 하나씩 건너뛴 3도 쌓기
+const sameHouses = (xs, ys) => xs.length === ys.length && xs.every((x, i) => midiOf(x) === midiOf(ys[i]));
+function twins(root, kind) {                                            // 같은 집들을 누르는 딴이름 화음
+  return triad(root, kind) ? spellingsAt(midiOf(root)).filter((r) => !sameSpell(r, root)).map((r) => triad(r, kind)).filter(Boolean) : [];
+}
+function scale(tonic, mode = "major") {                                 // 음계: 글자를 하나씩 차례로 쓴다. mode: major, minor, harmonic
+  const steps = mode === "major" ? MAJOR : MAJOR.slice(5).concat(MAJOR.slice(0, 5));   // 자연단음계는 장음계의 여섯째 음에서 시작한다
+  const out = [tonic];
+  let m = midiOf(tonic);
+  for (let i = 0; i < 6; i++) {
+    m += steps[i];
+    const w = whiteOfStep(stepOf(tonic) + i + 1), a = m - midiOf(w);
+    if (Math.abs(a) > MAXA) return null;
+    out.push(P(w.L, a, w.o));
+  }
+  if (mode === "harmonic") { const s = out[6]; if (s.a + 1 > MAXA) return null; out[6] = P(s.L, s.a + 1, s.o); }
+  return out;
+}
+const fitsIn = (p, notes) => notes.some((n) => n.L === p.L && n.a === p.a);            // 구역을 빼고 같은 철자가 들어 있는가
+const contextNames = (midi, notes) => spellingsAt(midi).filter((p) => fitsIn(p, notes));   // 문맥에 맞는 주소. 하나뿐일 때만 단일 정답으로 낸다
+
+// ── 말: 화면의 낱말은 여기서만 만든다 ──
+const SOL = ["도", "레", "미", "파", "솔", "라", "시"];
+const NUM_KO = ["", "한", "두", "세"];
+const JONG = [1, 1, 0, 1, 0, 0, 1, 1, 1, 0];                            // 숫자 0~9를 읽은 소리의 받침(영 일 이 삼 사 오 육 칠 팔 구)
+const signKo = (a) => (a === 0 ? "기호 없음" : (Math.abs(a) === MAXA ? "더블" : "") + (a > 0 ? "샵" : "플랫"));
+const dirKo = (a) => (a > 0 ? "오른쪽" : "왼쪽");
+const hopsKo = (a) => `${dirKo(a)}으로 ${NUM_KO[Math.abs(a)]} 칸`;
+const T = (p) => "⟦" + keyOf(p) + "⟧";                        // 주소 토큰 ⟦C#4⟧. 화면은 기호를 그려 넣고 읽기용은 말로 바꾼다
+const josa = (p, withJong, without) => T(p) + (JONG[mod(p.o, 10)] ? withJong : without);   // 주소는 숫자로 끝난다
+const numJosa = (n, withJong, without) => n + (JONG[mod(n, 10)] ? withJong : without);
+const sayKo = (p) => LETTERS[p.L] + (p.a ? " " + signKo(p.a) : "") + " " + p.o;        // 읽기용: "C 샵 4"
+const walkKo = (p) => (p.a ? `${SOL[p.L]}에서 ${hopsKo(p.a)}` : `${p.o}구역의 ${SOL[p.L]} 집`);                 // 걸음으로 말하기
+const pitchKo = (p) => (p.a ? `${SOL[p.L]}에서 ${Math.abs(p.a) === MAXA ? "두 반음" : "반음"} ${p.a > 0 ? "위" : "아래"}` : `${p.o}구역의 ${SOL[p.L]} 집`);   // 높낮이로 말하기
+// -- 1 끝 --
+
+// == 2 FLOW ==
+// 배달 모델, 문구, 흐름 함수. 순수 함수다.
+// ═══ 배달 모델과 흐름 ═══
+// 씨앗에서 문제의 모든 값을 만들고(jobModel), 조작마다 "바뀔 값"만 돌려준다(F.*).
+// 상태를 직접 바꾸지 않는다. 화면은 돌려받은 값을 setState에 넘기고 fx(소리)를 실행한다.
+
+// ── 배달 모델 ──
+function jobModel(job, day) {
+  const note = parse(job.note), hop = job.ask === "hop";
+  const from = hop ? midiOf(note) : midiOf(anchorOf(note));             // 출발 집
+  const target = hop ? from + job.steps : midiOf(note);                 // 도착 집
+  const names = spellingsAt(target, day.signs);                         // 이 집의 주소들(오늘까지 배운 기호로)
+  const board0 = hop ? [] : [note].concat((job.with || []).map(parse)); // 처음부터 달려 있는 문패
+  const rest = names.filter((n) => !board0.some((b) => sameSpell(b, n)));
+  const todo = job.plate === "all" ? rest.length : job.plate ? 1 : 0;   // 써야 할 문패 수
+  const m = { job, day, note, ask: job.ask, show: job.show || "both", hop, from, target, steps: hop ? job.steps : note.a,
+              names, board0, rest, todo, preview: !!job.preview, final: !!job.final };
+  const needs = [from, target];
+  if (todo) rest.forEach((n) => needs.push(midiOf(anchorOf(n))));
+  if (job.ask === "sort") {
+    m.cards = job.cards.map(parse);
+    m.right = m.cards.map((c) => midiOf(c) === target);
+    m.cards.forEach((c) => needs.push(midiOf(c), midiOf(anchorOf(c))));
+  }
+  if (job.ask === "fix") {
+    m.mis = misroute(note, job.err);                                    // 잘못 배달된 길
+    m.cause = job.err === "stay" ? "count" : job.err;
+    if (m.mis) needs.push(m.mis.from, m.mis.to);
+  }
+  m.win = windowFor(needs);
+  return m;
+}
+const phasesOf = (m) => (m.hop ? ["walk", "deliver"] : m.ask === "sort" ? ["sort", "deliver"] : m.ask === "fix" ? ["diag", "drop", "deliver"]
+  : (m.ask === "walk" ? ["start", "walk"] : ["drop"]).concat(m.todo ? ["plate"] : [], ["deliver"]));
+const homeOf = (m) => midiOf(whiteOfStep(m.win + (WIN - 1) / 2));       // 우체부가 처음 서는 곳: 창의 가운데 흰 집
+const CHIP = { hop: "걸음 연습", walk: "걸어서 배달", drop: "바로 배달", sort: "우편 분류", fix: "반송 편지" };
+function cardText(m) {                                                  // 편지 카드의 머리표와 문장
+  const chip = m.show === "staff" && m.ask === "drop" ? "악보 편지" : CHIP[m.ask];
+  if (m.hop) return { chip, text: `${T(m.note)} 집에서 ${hopsKo(m.steps)} 걸어가 배달해 주세요.` };
+  if (m.ask === "sort") return { chip, text: `${josa(m.note, "과", "와")} 같은 집으로 가는 편지를 모두 골라 주세요.` };
+  if (m.ask === "fix") return { chip, text: `${T(m.note)} 편지가 잘못 배달됐어요. 까닭을 찾아 고쳐 주세요.` };
+  if (m.show === "staff") return { chip, text: "악보에 적힌 주소로 배달해 주세요." };
+  return { chip, text: `${T(m.note)} 편지를 배달해 주세요.` };
+}
+function platesOf(m) {                                                  // 이 배달로 얻을 수 있는 문패(글자와 기호)
+  const out = m.hop || m.note.a === 0 ? [] : [m.note];
+  if (m.todo) m.rest.forEach((n) => { if (n.a) out.push(n); });
+  if (m.cards) m.cards.forEach((c, i) => { if (m.right[i] && c.a) out.push(c); });
+  return out;
+}
+function checkJob(m) {                                                  // 출제 제약. 어긴 것의 목록을 돌려준다
+  const bad = [], lo = m.win === null ? 0 : winLo(m.win), hi = m.win === null ? -1 : winHi(m.win), inWin = (x) => x >= lo && x <= hi;
+  if (m.win === null) bad.push("한 창에 들어가지 않는다");
+  if (!inWin(m.from) || !inWin(m.target)) bad.push("출발 집이나 도착 집이 창 밖이다");
+  if (m.hop && (m.job.steps === 0 || !isWhite(m.from))) bad.push("걸음 연습은 흰 집에서 한 칸 이상 걷는다");
+  if (m.ask === "walk" && m.note.a === 0) bad.push("걸어서 배달에는 기호가 있어야 한다");
+  if (!m.hop && !m.day.signs.includes(m.note.a)) bad.push("아직 배우지 않은 기호다");
+  if (m.job.plate && m.rest.length < 1) bad.push("쓸 문패가 없다");
+  if (m.ask === "sort") {
+    if (!m.right.some(Boolean) || m.right.every(Boolean)) bad.push("분류에는 맞는 편지와 아닌 편지가 다 있어야 한다");
+    if (m.cards.some((c) => sameSpell(c, m.note))) bad.push("기준 편지와 같은 주소의 카드가 있다");
+    if (m.cards.some((c, i) => m.cards.findIndex((d) => sameSpell(c, d)) !== i)) bad.push("같은 카드가 두 장이다");
+    if (m.cards.some((c) => !m.day.signs.includes(c.a))) bad.push("카드에 아직 배우지 않은 기호가 있다");
+  }
+  if (m.ask === "fix" && (!m.mis || m.mis.to === m.target || !inWin(m.mis.from) || !inWin(m.mis.to))) bad.push("반송 길을 만들 수 없다");
+  return bad;
+}
+
+// ── 문구 ──
+const say = (tone, text) => ({ tone, text });
+function guide(m, phase, board) {                                       // 단계에 들어설 때의 안내
+  const p = m.note;
+  if (phase === "start") return say("", `글자 ${LETTERS[p.L]}의 흰 집에 서요. 숫자 ${numJosa(p.o, "은", "는")} ${p.o}구역이에요.`);
+  if (phase === "walk") return say("", m.hop ? "아래 단추로 한 칸씩 걸어요. 한 칸이 반음이에요." : `${signKo(p.a)}은 ${hopsKo(p.a)}이에요. 아래 단추로 걸어요.`);
+  if (phase === "drop") return say("", m.ask === "fix" ? "맞는 집으로 옮겨 다시 배달해요." : m.show === "staff" ? "악보의 자리와 기호를 읽고 집을 골라요." : "집을 고르고 [배달]을 눌러요.");
+  if (phase === "plate") return say("", "이 집의 다른 주소를 써요. 흰 집으로 글자를, 단추로 기호를 정해요.");
+  if (phase === "sort") return say("", "같은 집으로 가는 편지를 모두 고르고 [확정]을 눌러요.");
+  if (phase === "diag") return say("", "배달된 길을 보세요. 어디가 잘못됐을까요?");
+  return say("good", reason(m, board || m.board0));
+}
+function reason(m, board) {                                             // 배달을 마쳤을 때의 한 문장
+  const p = m.note, w = whiteAt(m.target);
+  if (m.hop) return `${T(p)}에서 ${hopsKo(m.steps)} 가면 ${w ? T(w) + " 집" : "검은 집"}이에요.`;
+  if (board.length > 1) return `주소 ${board.length}개가 한 집에 모였어요. 차례로 듣고, 함께 들어요.`;
+  return `${josa(p, "은", "는")} ${pitchKo(p)}${p.a ? "예요" : "이에요"}.` + (p.a && w ? ` ${josa(w, "과", "와")} 같은 집이에요.` : "");
+}
+function sameKo(board) {                                                // 듣기가 끝난 뒤의 한 문장
+  if (board.length === 2) return `${josa(board[0], "은", "는")} ${pitchKo(board[0])}, ${josa(board[1], "은", "는")} ${pitchKo(board[1])}. 같은 집이에요.`;
+  return `${board.slice(0, -1).map(T).join(", ")}, ${josa(board[board.length - 1], "은", "는")} 모두 같은 집이에요.`;
+}
+const listenLabel = (board, k) => (k < board.length ? `${T(board[k])}: ${walkKo(board[k])}` : "함께 내면 한 소리로 들려요.");
+function startErr(m, pos, c) {
+  const p = m.note, w = whiteAt(pos);
+  if (c === "black") return `출발 집은 늘 흰 집이에요. 글자 ${LETTERS[p.L]}의 집을 찾아요.`;
+  if (c === "letter") return `이 집은 ${LETTERS[w.L]}예요. 편지의 글자는 ${LETTERS[p.L]}예요.`;
+  return `글자는 맞아요. 이 집은 ${w.o}구역이에요. 편지의 숫자는 ${numJosa(p.o, "이에요", "예요")}.`;
+}
+function walkErr(m, pos) {
+  const d = pos - m.from, a = m.steps;
+  if (m.hop) return `${hopsKo(a)} 가야 해요. 지금은 ${d ? hopsKo(d) + " 걸었어요" : "아직 걷지 않았어요"}.`;
+  if (d === 0) return `글자 집에서 멈췄어요. ${signKo(a)}만큼 걸어요.`;
+  if (Math.sign(d) !== Math.sign(a)) return `${signKo(a)}은 ${dirKo(a)}이에요. 지금은 ${dirKo(d)}으로 걸었어요.`;
+  return `${signKo(a)}은 ${NUM_KO[Math.abs(a)]} 칸이에요. 지금은 ${NUM_KO[Math.abs(d)]} 칸 걸었어요.`;
+}
+function dropErr(m, pos, c) {
+  const p = m.note;
+  if (c === "octave") return `글자와 기호는 맞아요. 출발 집이 ${p.o}구역의 ${LETTERS[p.L]} 집이어야 해요.`;
+  if (c === "letter") return `글자 ${LETTERS[p.L]}의 흰 집에서 출발해요. 지금 집은 거기서 너무 멀어요.`;
+  if (c === "extra") return `기호가 없으면 글자 집이 도착 집이에요. 지금은 ${hopsKo(pos - m.from)} 옆집이에요.`;
+  return walkErr(m, pos);
+}
+const helpKo = (m) => `${josa(m.note, "은", "는")} ${walkKo(m.note)}이에요. 옮겨 두었어요. [배달]을 눌러요.`;
+function sortErr(m, c) {
+  if (samePc(c, m.note)) return `${josa(c, "은", "는")} ${zoneOf(midiOf(c))}구역의 집이에요. 구역이 다르면 다른 소리예요.`;
+  return `${josa(c, "은", "는")} ${walkKo(c)}. 다른 집이에요.`;
+}
+const CAUSES = ["letter", "dir", "count", "octave"];
+const CAUSE_KO = { letter: "출발 집", dir: "방향", count: "걸음 수", octave: "구역" };
+function causeText(m) {
+  const p = m.note, a = p.a, d = m.mis.to - m.mis.from;
+  if (m.cause === "dir") return `${signKo(a)}은 ${dirKo(a)}인데 ${dirKo(d)}으로 갔어요. 고쳐서 배달해요.`;
+  if (m.cause === "count") return `${signKo(a)}은 ${NUM_KO[Math.abs(a)]} 칸인데 ${d ? NUM_KO[Math.abs(d)] + " 칸 갔어요" : "걷지 않았어요"}. 고쳐서 배달해요.`;
+  return `숫자 ${numJosa(p.o, "은", "는")} 출발 집의 구역이에요. ${p.o}구역의 ${LETTERS[p.L]} 집에서 출발해요.`;
+}
+
+// ── 흐름: 조작 하나에 바뀔 값만 돌려준다. 바뀔 것이 없으면 null ──
+const NOPE = [{ t: "nope" }];
+function fresh(m) {
+  const first = phasesOf(m)[0];
+  return { phase: first, pos: first === "walk" ? m.from : first === "diag" ? m.mis.to : homeOf(m), picked: false, tries: 0, flawed: false,
+           pen: { h: null, a: null }, board: m.board0.slice(), picks: m.cards ? m.cards.map(() => false) : [], off: [],
+           mine: null, goal: null, lit: -1, done: "", msg: guide(m, first) };
+}
+function enter(m, S, phase, extra) {                                    // 다음 단계로
+  const base = { phase, picked: false, tries: 0, mine: null, goal: null, off: [], pen: { h: null, a: null }, msg: guide(m, phase, (extra && extra.board) || S.board) };
+  if (phase === "deliver") Object.assign(base, { pos: m.target, done: S.flawed ? "half" : "full", fx: [{ t: "stamp" }, { t: "listen" }] });
+  return Object.assign(base, extra);
+}
+const toNext = (m, S, extra) => { const ps = phasesOf(m); return enter(m, S, ps[ps.indexOf(S.phase) + 1], extra); };
+const inWindow = (m, x) => x >= winLo(m.win) && x <= winHi(m.win);
+const F = {
+  move(m, S, midi) {                                                    // 집을 눌렀다
+    if (!inWindow(m, midi)) return null;
+    if (S.phase === "start" || S.phase === "drop") return { pos: midi, picked: true, mine: null, fx: [{ t: "hop", midi }] };
+    if (S.phase === "walk") return { msg: say("", "걸어서 가요. 아래 단추를 눌러요.") };
+    if (S.phase === "plate") return isWhite(midi) ? { pen: { h: midi, a: S.pen.a }, mine: null, fx: [{ t: "hop", midi }] }
+                                                  : { msg: say("", "글자는 흰 집에 있어요. 흰 집을 골라요.") };
+    return null;
+  },
+  nudge(m, S, dir) {                                                    // 걷기 단추 또는 화살표 키
+    if (S.phase === "start" || S.phase === "drop" || S.phase === "walk") {
+      const pos = S.pos + dir;
+      if (!inWindow(m, pos) || (S.phase === "walk" && Math.abs(pos - m.from) > MAXA + 1)) return null;
+      return { pos, picked: true, mine: null, fx: [{ t: "hop", midi: pos }] };
+    }
+    if (S.phase === "plate") {                                          // 쓰기에서는 흰 집끼리 옮겨 다닌다
+      let h = S.pen.h === null ? m.target : S.pen.h;
+      do { h += dir; } while (inWindow(m, h) && !isWhite(h));
+      return inWindow(m, h) ? { pen: { h, a: S.pen.a }, mine: null, fx: [{ t: "hop", midi: h }] } : null;
+    }
+    return null;
+  },
+  sign(m, S, a) {                                                       // 기호 단추
+    return S.phase === "plate" && m.day.signs.includes(a) ? { pen: { h: S.pen.h, a }, mine: null } : null;
+  },
+  pick(m, S, i) {                                                       // 편지 카드
+    return S.phase === "sort" && !S.off.includes(i) ? { picks: S.picks.map((v, k) => (k === i ? !v : v)), mine: null } : null;
+  },
+  cause(m, S, c) {                                                      // 반송 편지의 까닭
+    if (S.phase !== "diag" || S.off.includes(c)) return null;
+    if (c === m.cause) return enter(m, S, "drop", { pos: m.mis.to, mine: m.mis, msg: say("good", "맞아요. " + causeText(m)) });
+    if (S.tries + 1 >= 2) return enter(m, S, "drop", { pos: m.mis.to, mine: m.mis, flawed: true, msg: say("warn", `${CAUSE_KO[m.cause]} 쪽이 달랐어요. ` + causeText(m)), fx: NOPE });
+    return { tries: S.tries + 1, flawed: true, off: S.off.concat([c]), msg: say("warn", "길을 다시 보세요. 출발 집의 글자와 구역, 방향, 걸음 수를 차례로 견줘요."), fx: NOPE };
+  },
+  confirm(m, S) {                                                       // 주 단추
+    const p = m.note, tries = S.tries + 1;
+    if ((S.phase === "start" || S.phase === "drop") && !S.picked) return { msg: say("", "집을 먼저 골라 주세요. 집을 누르거나 단추로 옮겨요.") };   // 고르지 않은 확정은 채점하지 않는다
+    if (S.phase === "start") {
+      const c = diagStart(p, S.pos);
+      if (c === "ok") return enter(m, S, "walk", { pos: m.from });
+      if (tries >= 2) return { tries, flawed: true, pos: m.from, picked: true, msg: say("warn", `출발 집은 ${p.o}구역의 ${SOL[p.L]}(${LETTERS[p.L]}) 집이에요. 옮겨 두었어요. [여기서 출발]을 눌러요.`), fx: NOPE };
+      return { tries, flawed: true, msg: say("warn", startErr(m, S.pos, c)), fx: NOPE };
+    }
+    if (S.phase === "walk") {
+      if (S.pos === m.target) return toNext(m, S);
+      if (tries >= 2) return { tries, flawed: true, pos: m.target, msg: say("warn", m.hop ? `${hopsKo(m.steps)} 가면 이 집이에요. 옮겨 두었어요. [배달]을 눌러요.` : helpKo(m)), fx: NOPE };
+      return { tries, flawed: true, msg: say("warn", walkErr(m, S.pos)), fx: NOPE };
+    }
+    if (S.phase === "drop") {
+      if (S.pos === m.target) return toNext(m, S);
+      const near = Math.abs(S.pos - m.from) <= MAXA + 1, mine = S.mine || { from: m.from, to: near ? S.pos : m.from };
+      if (tries >= 2) return { tries, flawed: true, pos: m.target, picked: true, mine, goal: { from: m.from, to: m.target }, msg: say("warn", helpKo(m)), fx: NOPE };
+      return { tries, flawed: true, mine, msg: say("warn", dropErr(m, S.pos, diagnose(p, S.pos))), fx: NOPE };
+    }
+    if (S.phase === "plate") {
+      if (S.pen.h === null || S.pen.a === null) return { msg: say("", "흰 집과 기호를 모두 골라요.") };
+      const w = whiteAt(S.pen.h), pen = P(w.L, S.pen.a, w.o);
+      if (S.board.some((b) => sameSpell(b, pen))) return { msg: say("", `${josa(pen, "은", "는")} 이미 달린 문패예요. 다른 주소를 찾아요.`) };
+      if (midiOf(pen) === m.target) {
+        const board = S.board.concat([pen]), left = m.board0.length + m.todo - board.length;
+        if (left <= 0) return toNext(m, S, { board });
+        return { board, pen: { h: null, a: null }, tries: 0, mine: null, msg: say("good", `${T(pen)} 문패를 달았어요. 주소가 ${left}개 더 있어요.`), fx: [{ t: "stamp" }] };
+      }
+      if (tries >= 2) {
+        const ans = m.rest.find((n) => !S.board.some((b) => sameSpell(b, n)));
+        return { tries, flawed: true, pen: { h: midiOf(anchorOf(ans)), a: ans.a }, mine: null,
+                 msg: say("warn", `두 칸 안의 흰 집에서 출발하면 돼요. ${josa(ans, "을", "를")} 적어 두었어요. [문패 달기]를 눌러요.`), fx: NOPE };
+      }
+      return { tries, flawed: true, mine: { from: S.pen.h, to: midiOf(pen) }, msg: say("warn", `${josa(pen, "은", "는")} ${walkKo(pen)}. 다른 집에 도착해요.`), fx: NOPE };
+    }
+    if (S.phase === "sort") {
+      if (!S.picks.some(Boolean)) return { msg: say("", "편지를 하나 이상 골라요.") };
+      const wrong = S.picks.map((v, i) => (v && !m.right[i] ? i : -1)).filter((i) => i >= 0);
+      const need = m.right.filter(Boolean).length, got = S.picks.filter((v, i) => v && m.right[i]).length;
+      if (!wrong.length && got === need) return toNext(m, S, { board: m.board0.concat(m.cards.filter((c, i) => m.right[i])) });
+      if (tries >= 2) {
+        const list = m.cards.filter((c, i) => m.right[i]);
+        return { tries, flawed: true, picks: m.right.slice(), off: m.right.map((r, i) => (r ? -1 : i)).filter((i) => i >= 0), mine: null,
+                 msg: say("warn", `같은 집으로 가는 편지는 ${list.map(T).join(", ")}${JONG[mod(list[list.length - 1].o, 10)] ? "이에요" : "예요"}. 골라 두었어요. [확정]을 눌러요.`), fx: NOPE };
+      }
+      if (wrong.length) {
+        const c = m.cards[wrong[0]];
+        return { tries, flawed: true, picks: S.picks.map((v, i) => v && m.right[i]), off: S.off.concat(wrong),
+                 mine: { from: midiOf(anchorOf(c)), to: midiOf(c) }, msg: say("warn", sortErr(m, c)), fx: NOPE };
+      }
+      return { tries, flawed: true, msg: say("warn", `같은 집으로 가는 편지는 ${need}통이에요. 지금은 ${got}통 골랐어요.`), fx: NOPE };
+    }
+    if (S.phase === "deliver") return { advance: true };
+    return null;
+  },
+};
+
+// ── 발견 장면: 배달 화면의 무대를 그대로 쓰는 모델. 채점하지 않는다 ──
+const COUNT_KO = ["", "하나", "둘", "셋"];
+const jong = (word) => (word.charCodeAt(word.length - 1) - 0xAC00) % 28 > 0;   // 한글 낱말이 받침으로 끝나는가
+const solOf = (midi) => SOL[whiteAt(midi).L];
+const andKo = (a, b) => `${a}${jong(a) ? "과" : "와"} ${b}`;
+const SCENE_LINES = {                                                    // 장면의 문장. 수와 낱말은 모델과 엔진에서 가져온다. 판독 줄에 하나씩 보인다
+  S1: (m) => { const pairs = []; for (let i = 0; i < m.glow.length; i += 2) pairs.push(andKo(solOf(m.glow[i]), solOf(m.glow[i + 1]))); return ["집과 집 사이 한 칸이 반음이에요.", `${pairs.join(", ")} 사이에는 검은 집이 없어요.`, "그래도 한 칸이에요."]; },
+  S2: () => ["주소는 다른데 집이 같아요.", "이런 이름들을 딴이름한소리라고 해요.", "피아노처럼 조율한 악기에서는 소리도 같아요."],
+  S3: (m) => { const p = m.board0[0], to = solOf(m.target); return [`${signKo(p.a)}은 "검은 집"이 아니라 "${hopsKo(p.a)}"이에요.`, `${SOL[p.L]}의 ${dirKo(p.a)}은 바로 ${to}${jong(to) ? "이에요" : "예요"}.`]; },
+  S4: (m) => { const p = m.board0[0]; return [`${T(p)}의 ${numJosa(p.o, "은", "는")} 출발 집의 구역이에요.`, `걸어서 경계를 넘으면 ${zoneOf(m.target)}구역의 집에 닿아요.`]; },
+  S5: (m) => { const n = COUNT_KO[m.glow.length]; return [`이 집에서 ${NUM_KO[MAXA]} 칸 안에 흰 집이 ${n}${jong(n) ? "이에요" : "예요"}.`, "흰 집마다 주소가 하나씩 나와요."]; },
+  S6: (m) => {
+    const n = COUNT_KO[m.glow.length], houses = MAJOR.reduce((s, x) => s + x, 0);                       // 한 구역의 집 수
+    let total = 0;
+    for (let i = 0; i < houses; i++) total += spellingsAt(m.target + i).length;                        // 한 구역의 주소 수
+    return [`${NUM_KO[MAXA]} 칸 안의 흰 집이 ${andKo(solOf(m.glow[0]), solOf(m.glow[1]))} ${n}뿐이에요.`,
+            `${houses >= 10 ? "열" : ""}${NUM_KO[houses % 10]} 집 가운데 이 집만 주소가 ${n}${jong(n) ? "이라서" : "라서"} 주소는 모두 ${total}개예요.`];
+  },
+};
+function sceneModel(sc, day) {                                           // 장면 씨앗과 그 장면이 끼어드는 배달일에서 모델을 만든다
+  const names = sc.house ? spellingsAt(midiOf(parse(sc.house)), day.signs) : (sc.names || []).map(parse);
+  const hops = sc.hops ? sc.hops.map((h) => [midiOf(parse(h[0])), h[1]]) : null;
+  const target = names.length ? midiOf(names[0]) : null, white = target === null ? null : whiteAt(target);
+  const board = sc.names && names.length === 1 && names[0].a && white ? names.concat([white]) : names;   // 주소 하나만 보여 줄 때는 도착한 흰 집의 제 이름을 곁에 단다
+  const anchors = board.map((p) => midiOf(anchorOf(p))), needs = hops ? hops.flatMap((h) => [h[0], h[0] + h[1]]) : anchors.concat([target]);
+  const m = { job: { id: sc.id }, day, ask: "scene", show: "both", hop: false, note: null, steps: 0, from: needs[0], target, names: board, board0: board, rest: [], todo: 0,
+              preview: false, final: false, win: windowFor(needs), card: { chip: "발견", text: sc.title } };
+  if (hops) {
+    m.hops = hops;                                                       // 걸음만 그린다
+    m.glow = hops.filter((h) => isWhite(h[0]) && isWhite(h[0] + h[1])).flatMap((h) => [h[0], h[0] + h[1]]);   // 검은 집 없이 이웃한 흰 집들을 밝힌다
+    m.tune = { mids: hops.flatMap((h) => [h[0], h[0] + h[1]]), together: false };                      // 들어 보기: 걸음마다 두 집을 차례로
+    m.env = { label: "한 칸", name: "반음", note: "" };
+  } else {
+    if (sc.house) m.glow = anchors;                                      // 두 칸 안의 흰 집들을 밝힌다
+    m.env = { label: `주소 ${board.length}개`, name: "한 집", note: "" };
+  }
+  m.lines = SCENE_LINES[sc.id](m);
+  return m;
+}
+// P20–P26: supplemental models stay separate from saved delivery records.
+const EXTRA_TEXTS = [
+  "피아노처럼 조율한 악기에서는 소리도 같아요. 다른 조율이나 실제 연주에서는 아주 조금 다르게 낼 때도 있어요.",
+  "구역은 옥타브예요. 4구역은 ⟦C4⟧부터 ⟦B4⟧까지예요.",
+  "샵은 올림표, 플랫은 내림표예요.", "더블샵은 겹올림표, 더블플랫은 겹내림표예요.",
+];
+function bookRows() { return Array.from({ length: MAJOR.reduce((a, b) => a + b, 0) }, (_, i) => ({ midi: midiOf(P(0)) + i, names: spellingsAt(midiOf(P(0)) + i) })); }
+function plateDay(key) { return DAYS.findIndex((d) => d.jobs.some((j) => platesOf(jobModel(j, d)).some((p) => plateKey(p) === key))); }
+const ownsPlate = (p, got = store.data.plates) => p.a === 0 || got.includes(plateKey(p));
+function reviewMaterial(signs = ALL_SIGNS) {
+  const lo = midiOf(P(5, 0, 3)), hi = midiOf(P(2, 0, 5)), out = [];
+  for (let o = 3; o <= 5; o++) for (let L = 0; L < LETTERS.length; L++) for (const a of signs) {
+    const p = P(L, a, o), from = midiOf(anchorOf(p)), target = midiOf(p);
+    if (from >= lo && from <= hi && target >= lo && target <= hi) out.push(p);
+  }
+  return out;
+}
+function reviewHash(text) { let n = 2166136261; for (const c of text) n = Math.imul(n ^ c.charCodeAt(0), 16777619); return n >>> 0; }
+function reviewPlan(causes, signs, date) {
+  const ranked = Object.keys(causes).filter((k) => causes[k] > 0).sort((a, b) => causes[b] - causes[a] || a.localeCompare(b)).slice(0, 2);
+  if (!ranked.length) return null;
+  const counts = Object.keys(causes).sort().map((k) => k + ":" + causes[k]).join("|"), day = { id: "rv", name: "복습 배달", signs: signs.slice(), jobs: [] }, assigned = [];
+  let seed = reviewHash(date + "|" + counts), random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+  const material = reviewMaterial(signs), valid = (j) => { try { return checkJob(jobModel(j, day)).length === 0; } catch (e) { return false; } };
+  for (let i = 0; i < 6; i++) {
+    const category = ranked.length === 1 ? ranked[0] : ranked[Math.floor(i / 3)], options = [];
+    for (const p of material) {
+      const base = { id: "rv-" + (i + 1), ask: "drop", note: keyOf(p), show: "both", preview: i !== 5, final: i === 5 }, more = [];
+      if (category === "octave") { if (zoneOf(midiOf(p)) !== p.o) more.push(Object.assign({}, base, { show: "staff" }), Object.assign({}, base, { ask: "fix", err: "octave" })); }
+      else if (category === "dir" || category === "count") { if (p.a) more.push(Object.assign({}, base, { ask: "walk" }), Object.assign({}, base, { ask: "fix", err: category }), base); }
+      else if (category === "letter" || category === "black") { if (p.a) more.push(Object.assign({}, base, { ask: "walk" })); }
+      else if (category === "plate") more.push(Object.assign({}, base, { plate: "all" }));
+      else if (category === "sort") {
+        const others = spellingsAt(midiOf(p), signs).filter((q) => !sameSpell(q, p));
+        for (const q of others) for (const wrong of material) if (midiOf(wrong) !== midiOf(p)) { const j = Object.assign({}, base, { ask: "sort", cards: [keyOf(q), keyOf(wrong)] }); if (valid(j)) { more.push(j); break; } }
+      } else if (category === "cause") { if (p.a) for (const err of ["dir", "count", "octave"]) more.push(Object.assign({}, base, { ask: "fix", err })); }
+      else more.push(base);
+      for (const j of more) if (valid(j)) options.push(j);
+    }
+    if (!options.length) for (const p of material) { const j = { id: "rv-" + (i + 1), ask: "drop", note: keyOf(p), show: "both", preview: i !== 5, final: i === 5 }; if (valid(j)) options.push(j); }
+    if (!options.length) throw new Error("복습 배달을 만들 수 없어요.");
+    day.jobs.push(options[Math.floor(random() * options.length)]); assigned.push(category);
+  }
+  return { day, assigned };
+}
+
+// -- 2 끝 --
+
+// == 3 JOBS ==
+// 배달 씨앗과 발견 장면 씨앗.
+// ═══ 배달 씨앗 ═══
+// 씨앗에는 방식(ask), 주소(note), 도움 설정만 적는다. 도착 집, 문패, 정답, 문구는 엔진과 배달 모델이 만든다.
+// ask: hop 걸음 연습 · walk 걸어서 배달 · drop 바로 배달 · sort 우편 분류 · fix 반송 편지
+// show: "staff"이면 주소를 악보로만 보여 준다 · plate: 배달 뒤에 쓸 문패(1 또는 "all") · with: 이미 달린 문패
+// preview: 문패를 쓸 때 걸음을 미리 보여 준다 · final: 마감 배달 · steps: 걸음 연습의 걸음 수 · err: 반송의 까닭
+const DAYS = [
+  { id: "d0", name: "첫 배달", signs: [0], jobs: [
+    { id: "d0-01", ask: "drop", note: "C4" },
+    { id: "d0-02", ask: "drop", note: "A4" },
+    { id: "d0-03", ask: "drop", note: "C5" },
+    { id: "d0-04", ask: "drop", note: "B3" },
+    { id: "d0-05", ask: "hop", note: "E4", steps: 1 },
+    { id: "d0-06", ask: "hop", note: "C4", steps: 1 },
+    { id: "d0-07", ask: "hop", note: "C5", steps: -1, final: true },
+  ] },
+  { id: "d1", name: "검은 집의 두 주소", signs: [0, 1, -1], jobs: [
+    { id: "d1-01", ask: "walk", note: "C#4" },
+    { id: "d1-02", ask: "walk", note: "Db4", with: ["C#4"] },
+    { id: "d1-03", ask: "walk", note: "F#4", plate: 1, preview: true },
+    { id: "d1-04", ask: "drop", note: "Ab4", plate: 1, preview: true },
+    { id: "d1-05", ask: "drop", note: "Eb4", show: "staff", plate: 1, preview: true },
+    { id: "d1-06", ask: "sort", note: "Db4", cards: ["C#4", "D#4", "C4", "Eb4"] },
+    { id: "d1-07", ask: "drop", note: "A#4", show: "staff", plate: 1, final: true },
+  ] },
+  { id: "d2", name: "흰 집의 숨은 주소", signs: [0, 1, -1], jobs: [
+    { id: "d2-01", ask: "walk", note: "E#4" },
+    { id: "d2-02", ask: "walk", note: "Fb4" },
+    { id: "d2-03", ask: "walk", note: "B#3" },
+    { id: "d2-04", ask: "drop", note: "Cb4", show: "staff" },
+    { id: "d2-05", ask: "drop", note: "F4", plate: 1, preview: true },
+    { id: "d2-06", ask: "drop", note: "C4", plate: 1, preview: true },
+    { id: "d2-07", ask: "sort", note: "C4", cards: ["B#3", "B#4", "Cb4", "B3"] },
+    { id: "d2-08", ask: "drop", note: "Cb5", show: "staff", final: true },
+  ] },
+  { id: "d3", name: "두 칸 특급: 더블샵", signs: [0, 1, -1, 2], jobs: [
+    { id: "d3-01", ask: "walk", note: "Cx4" },
+    { id: "d3-02", ask: "walk", note: "Fx4" },
+    { id: "d3-03", ask: "drop", note: "Ex4", plate: "all", preview: true },
+    { id: "d3-04", ask: "drop", note: "Dx4", show: "staff" },
+    { id: "d3-05", ask: "drop", note: "A4", plate: 1, preview: true },
+    { id: "d3-06", ask: "fix", note: "Ax4", err: "count" },
+    { id: "d3-07", ask: "sort", note: "E4", cards: ["Dx4", "Fb4", "D#4", "Ex4"] },
+    { id: "d3-08", ask: "drop", note: "B4", plate: "all", final: true },
+  ] },
+  { id: "d4", name: "두 칸 특급: 더블플랫", signs: [0, 1, -1, 2, -2], jobs: [
+    { id: "d4-01", ask: "walk", note: "Ebb4" },
+    { id: "d4-02", ask: "walk", note: "Bbb4" },
+    { id: "d4-03", ask: "drop", note: "Fbb4", plate: "all", preview: true },
+    { id: "d4-04", ask: "drop", note: "Abb4", show: "staff" },
+    { id: "d4-05", ask: "drop", note: "D4", plate: "all", preview: true },
+    { id: "d4-06", ask: "fix", note: "Gbb4", err: "dir" },
+    { id: "d4-07", ask: "sort", note: "A4", cards: ["Gx4", "Bbb4", "Ab4", "Bbb3"] },
+    { id: "d4-08", ask: "drop", note: "C4", plate: "all", final: true },
+  ] },
+  { id: "d5", name: "옥타브 경계 검문소", signs: [0, 1, -1, 2, -2], jobs: [
+    { id: "d5-01", ask: "walk", note: "Bx3" },
+    { id: "d5-02", ask: "walk", note: "Cbb4" },
+    { id: "d5-03", ask: "drop", note: "C#4", plate: "all", preview: true },
+    { id: "d5-04", ask: "sort", note: "C#4", cards: ["Db4", "Db5", "C#5", "D4"] },
+    { id: "d5-05", ask: "fix", note: "B#4", err: "octave" },
+    { id: "d5-06", ask: "drop", note: "Bb3", show: "staff", plate: "all", preview: true },
+    { id: "d5-07", ask: "drop", note: "G#4", plate: "all" },
+    { id: "d5-08", ask: "drop", note: "Cb5", show: "staff", plate: "all", final: true },
+  ] },
+];
+// 스파이크의 하루: 조작마다 하나씩 아홉 건
+const SPIKE = { id: "sp", name: "배달 스파이크", signs: [0, 1, -1, 2, -2], jobs: [
+  { id: "sp-1", ask: "drop", note: "G4" },
+  { id: "sp-2", ask: "walk", note: "C#4" },
+  { id: "sp-3", ask: "walk", note: "Db4", with: ["C#4"] },
+  { id: "sp-4", ask: "drop", note: "F#4", plate: 1, preview: true },
+  { id: "sp-5", ask: "drop", note: "E#4", show: "staff" },
+  { id: "sp-6", ask: "walk", note: "Cx4", plate: "all", preview: true },
+  { id: "sp-7", ask: "sort", note: "D4", cards: ["Cx4", "Ebb4", "Db4", "D5"] },
+  { id: "sp-8", ask: "walk", note: "B#3" },
+  { id: "sp-9", ask: "fix", note: "Cb4", err: "octave", final: true },
+] };
+// 발견 장면 씨앗. after: 이 배달을 마친 뒤에 끼운다 · names: 걸음과 문패를 그릴 주소 · house: 그 집의 주소 전부를 그린다 · hops: 걸음만 그린다(출발 집, 걸음 수)
+const SCENES = [
+  { id: "S1", title: "한 칸이 반음", after: "d0-04", hops: [["C4", 1], ["E4", 1], ["A4", 1], ["B4", 1]] },
+  { id: "S2", title: "두 주소, 한 집", after: "d1-02", names: ["C#4", "Db4"] },
+  { id: "S3", title: "기호가 붙어도 흰 집", after: "d2-01", names: ["E#4"] },
+  { id: "S4", title: "숫자는 글자를 따라가요", after: "d2-03", names: ["B#3"] },
+  { id: "S5", title: "세 주소", after: "d4-05", house: "D4" },
+  { id: "S6", title: "이 집만 둘", after: "d5-07", house: "G#4" },
+];
+// -- 3 끝 --
+
+// == 4 STATE ==
+// 상태를 바꾸는 곳은 setState 하나뿐이다.
+const $ = (id) => document.getElementById(id);
+const BOOT = [], PAINT = [], HOOKS = {};
+const atBoot = (order, fn) => BOOT.push([order, fn]);                    // 시작할 때 할 일. 순서가 작은 것부터 한다
+const onPaint = (order, fn) => { PAINT.push([order, fn]); PAINT.sort((a, b) => a[0] - b[0]); };   // 그릴 때 할 일. 순서가 작은 것부터 한다
+const on = (name, fn) => { (HOOKS[name] = HOOKS[name] || []).push(fn); };  // 일이 생겼을 때 할 일을 건다
+const emit = (name, arg) => (HOOKS[name] || []).map((fn) => fn(arg));      // 건 일을 차례로 하고 돌려준 값들을 모은다
+let M = null;                                                            // 지금 배달의 모델. 씨앗에서 계산한 값이고 상태가 아니다
+let painting = true;                                                     // 검사가 화면을 건드리지 않게 그리기를 끄는 자리
+const S = { screen: "run", day: "", idx: -1, requeue: [], results: [], gained: [], report: null, dev: false, scene: null, note: "",
+            phase: "", pos: 0, picked: false, tries: 0, flawed: false, pen: { h: null, a: null }, board: [], picks: [], off: [],
+            mine: null, goal: null, lit: -1, done: "", msg: { tone: "", text: "" } };
+function render() { if (painting) for (const p of PAINT) p[1](); }
+function setState(patch) { Object.assign(S, patch); render(); }
+
+// ── 배달 열기 ──
+const BOOK = [SPIKE].concat(DAYS);                                       // 검사용 하루("sp")와 v1.0의 배달일 여섯
+const dayOf = (id) => BOOK.find((d) => d.id === id);
+const dayNow = () => dayOf(S.day);
+function queueOf(n, requeue) {                                           // 그날의 줄: 첫 번째 배달들, 다시 낼 배달들, 마감 배달. 값은 배달의 번호
+  const q = [];
+  for (let i = 0; i < n - 1; i++) q.push(i);
+  return q.concat(requeue, [n - 1]);
+}
+const queueNow = () => queueOf(dayNow().jobs.length, S.requeue);
+function runPatch(day, idx, requeue, results) {                          // 배달 하나를 여는 데 드는 값 전부. 모델을 먼저 만든다
+  const d = dayOf(day), m = jobModel(d.jobs[queueOf(d.jobs.length, requeue)[idx]], d);
+  return { m, patch: Object.assign({ screen: "run", day, idx, requeue, results, scene: null }, fresh(m)) };
+}
+function openRun(day, idx, requeue, results, extra) {                    // 배달을 연다. 상태는 한 번에 넣는다
+  emit("leave");
+  const r = runPatch(day, idx || 0, requeue || [], results || []);
+  M = r.m;
+  setState(Object.assign(r.patch, extra));
+}
+let goHome = () => openRun("d0", 0);                                     // 처음 화면. 지도가 생기면 갈아 끼운다
+atBoot(50, () => {                                                       // 주소 끝에 #d3, #d3-2, #sp를 붙여 열면 그 배달에서 시작한다. 개발용이고 저장하지 않는다
+  const hash = /^#(sp|d\d)(?:-(\d+))?!?$/.exec(location.hash), d = hash && dayOf(hash[1]);
+  if (!d) return goHome();
+  store.hold = true;
+  openRun(d.id, Math.min(d.jobs.length, hash[2] ? +hash[2] : 1) - 1, [], [], { dev: true });
+});
+atBoot(90, () => { window.__twn = { S, model: () => M, BOOK, F, store, openDay: (i, idx) => { store.hold = true; openRun(BOOK[i].id, idx || 0, [], [], { dev: true }); } }; });   // 점검용
+
+// ── 조작을 상태로 ──
+function causeOf(m, S0) {                                                // 채점한 오답의 까닭 코드. 저장과 복습 배달의 재료
+  const ph = S0.phase, d = S0.pos - m.from;
+  if (ph === "start") return diagStart(m.note, S0.pos);
+  if (ph === "walk" && m.hop) return d === 0 ? "stay" : Math.sign(d) !== Math.sign(m.steps) ? "dir" : "count";
+  if (ph === "walk" || ph === "drop") return diagnose(m.note, S0.pos);
+  return ph === "plate" ? "plate" : ph === "sort" ? "sort" : "cause";
+}
+function act(patch) {                                                    // 흐름이 돌려준 값을 상태에 넣고 소리를 낸다
+  if (!patch) return;
+  if (patch.advance) { if (!emit("next").some(Boolean)) nextJob(); return; }
+  const p = Object.assign({}, patch), fx = p.fx || [];
+  delete p.fx;
+  if (fx.some((f) => f.t === "nope")) emit("wrong", causeOf(M, S));     // 채점한 오답
+  if (p.done) Object.assign(p, ...emit("done", p.done));                // 배달이 듣기 단계에 들어섰다
+  setState(p);
+  fx.forEach(runFx);
+}
+function nextJob() {                                                     // 다음 배달. 줄이 끝났으면 그날을 마친다
+  if (S.idx + 1 < queueNow().length) return openRun(S.day, S.idx + 1, S.requeue, S.results);
+  emit("leave");
+  setState(Object.assign({ screen: "close" }, ...emit("finish")));
+}
+on("done", (done) => ({ results: S.results.concat([{ id: M.job.id, done }]) }));
+
+// ── 배달일의 흐름: 다시 내기, 통과, 문패, 이어하기 ──
+const passNeed = (n) => Math.ceil(n * 0.8);                              // 통과 기준: 한 번에 배달한 편지가 배달 수의 80% 이상(올림)
+const plateKey = (p) => LETTERS[p.L] + p.a;                              // 문패의 열쇠: 글자와 변화량. "C1", "D-1"
+function dayReport(day, results) {                                       // 그날의 결과. 배달마다 첫 번째 결과만 센다
+  const jobs = dayOf(day).jobs, first = {};
+  results.forEach((r) => { if (!(r.id in first)) first[r.id] = r.done; });
+  const full = jobs.filter((j) => first[j.id] === "full").length, need = passNeed(jobs.length), passed = full >= need;
+  return { n: jobs.length, full, need, passed, stamp: !passed ? 0 : full === jobs.length ? 2 : 1 };   // 도장: 통과 1, 모두 한 번에 배달 2
+}
+const dayOpen = (id) => { const k = DAYS.findIndex((d) => d.id === id); return k <= 0 || !!(store.data.days[DAYS[k - 1].id] || {}).passed; };   // 앞 배달일을 통과해야 열린다
+on("wrong", (code) => {                                                  // 채점한 오답: 까닭 누계. 저장은 듣기 단계에서 한다
+  if (!S.dev) store.data.causes = Object.assign({}, store.data.causes, { [code]: (store.data.causes[code] || 0) + 1 });
+});
+on("done", (done) => {                                                   // 듣기 단계에 들어섰다: 다시 낼지 정하고, 문패를 얻고, 여기까지 저장한다
+  const n = dayNow().jobs.length, again = done === "half" && S.idx < n - 1;   // 줄의 앞 n-1 자리가 첫 번째 배달이다. 마감 배달과 다시 낸 배달은 다시 내지 않는다
+  const requeue = again ? S.requeue.concat([queueNow()[S.idx]]) : S.requeue;
+  if (S.dev) return { requeue };
+  const d = store.data, got = done === "full" ? platesOf(M).map(plateKey).filter((k, i, a) => a.indexOf(k) === i && !d.plates.includes(k)) : [];
+  const gained = S.gained.concat(got), results = S.results.concat([{ id: M.job.id, done }]);
+  d.plates = d.plates.concat(got);
+  d.stats = { jobs: d.stats.jobs + 1, clean: d.stats.clean + (done === "full" ? 1 : 0) };
+  d.active = { day: S.day, index: S.idx + 1, results: results.map((r) => (r.done === "full" ? 1 : 2)), requeue, gained };
+  store.save();
+  return { requeue, gained };
+});
+on("finish", () => {                                                     // 그날을 마쳤다: 통과와 도장을 적는다
+  const report = dayReport(S.day, S.results);
+  if (!S.dev) {
+    const d = store.data, was = d.days[S.day] || { passed: false, stamp: 0, runs: 0, best: 0 };
+    d.days = Object.assign({}, d.days, { [S.day]: { passed: was.passed || report.passed, stamp: Math.max(was.stamp, report.stamp), runs: was.runs + 1, best: Math.max(was.best, report.full) } });
+    d.active = null;
+    store.save();
+  }
+  return { report };
+});
+function resumePlan(a) {                                                 // 저장된 '하던 배달일'에서 이어 열 값을 만든다. 믿을 수 없는 값이면 null
+  const d = a && DAYS.find((x) => x.id === a.day);
+  if (!d || !Array.isArray(a.results) || !Array.isArray(a.requeue) || !a.results.every((v) => v === 1 || v === 2)) return null;
+  const n = d.jobs.length, want = a.results.slice(0, n - 1).map((v, i) => (v === 2 ? i : -1)).filter((i) => i >= 0);   // 다시 낼 배달은 첫 번째 결과에서 정해진다
+  const q = queueOf(n, want);
+  if (JSON.stringify(a.requeue) !== JSON.stringify(want) || a.index !== a.results.length || a.index > q.length) return null;
+  return { day: d.id, index: a.index, requeue: want, gained: Array.isArray(a.gained) ? a.gained.filter((k) => typeof k === "string") : [],
+           results: a.results.map((v, i) => ({ id: d.jobs[q[i]].id, done: v === 1 ? "full" : "half" })) };
+}
+function resume() {                                                      // 하던 배달일을 이어서 연다. 이을 것이 없으면 false
+  const p = resumePlan(store.data.active);
+  if (!p) { if (store.data.active) { store.data.active = null; store.save(); } return false; }
+  const last = queueOf(dayOf(p.day).jobs.length, p.requeue).length - 1;
+  openRun(p.day, Math.min(p.index, last), p.requeue, p.results, { dev: false, gained: p.gained, report: null });
+  if (p.index > last) nextJob();                                         // 마지막 배달까지 마치고 나갔으면 바로 마감한다
+  return true;
+}
+const startDay = (id) => openRun(id, 0, [], [], { dev: false, gained: [], report: null });
+
+
+// ── 발견 장면 ──
+const sceneDay = (sc) => DAYS.find((d) => d.jobs.some((j) => j.id === sc.after));
+function openScene(sc, from) {                                           // 장면을 연다. 모델을 먼저 만들고 상태를 한 번에 넣는다. from: 닫은 뒤 돌아갈 곳
+  emit("leave");
+  M = sceneModel(sc, sceneDay(sc));
+  setState({ screen: "scene", scene: { id: sc.id, line: 0, from }, phase: "deliver", pos: M.from, picked: false, tries: 0, flawed: false, pen: { h: null, a: null },
+             board: M.board0.slice(), picks: [], off: [], mine: null, goal: null, lit: -1, done: "", msg: say("", M.lines[0]) });
+}
+function closeScene() {                                                  // 마지막 문장에서 [알겠어요]: 본 장면을 적고 돌아간다
+  if (!S.dev && !store.data.scenes.includes(S.scene.id)) { store.data.scenes = store.data.scenes.concat([S.scene.id]); store.save(); }
+  if (S.scene.from === "run") nextJob(); else if (S.scene.from === "book") openBook("title"); else goHome();
+}
+on("next", () => {                                                       // 주 단추가 '다음'을 냈다. 여기서 처리했으면 true
+  if (S.screen === "scene") {
+    const line = S.scene.line + 1;
+    if (line >= M.lines.length) { closeScene(); return true; }
+    emit("leave");                                                       // 듣던 것을 멈춘다
+    setState({ scene: Object.assign({}, S.scene, { line }), lit: -1, msg: say("", M.lines[line]) });
+    return true;
+  }
+  const first = S.screen === "run" && S.idx < dayNow().jobs.length - 1;    // 첫 번째 배달 뒤에만 끼어든다. 다시 낸 배달 뒤에는 끼어들지 않는다
+  const sc = first && SCENES.find((x) => x.after === M.job.id && (S.dev || !store.data.scenes.includes(x.id)));
+  if (!sc) return false;
+  openScene(sc, "run");
+  return true;
+});
+atBoot(51, () => {                                                       // 주소 끝에 #S2를 붙여 열면 그 장면에서 시작한다. 개발용이고 저장하지 않는다
+  const sc = SCENES.find((x) => "#" + x.id === location.hash), d = sc && sceneDay(sc);
+  if (!sc) return;
+  store.hold = true;
+  openRun(d.id, d.jobs.findIndex((j) => j.id === sc.after), [], [], { dev: true });
+  openScene(sc, "run");
+});
+
+// ── 지도 ──
+function showMap(note) {                                                 // 지도를 연다. note: 지도 위에 적을 한 줄
+  emit("leave");
+  setState({ screen: "map", scene: null, note: note || "" });
+}
+goHome = () => showMap("");                                              // 처음 화면은 지도다
+function openTitle() { emit("leave"); setState({ screen: "title", scene: null, dev: false, reviewRecommended: false, note: "" }); }
+goHome = openTitle;
+function openBook(from) { emit("leave"); setState({ screen: "book", bookFrom: from || "title", bookSelected: null, lit: -1 }); }
+function closeBook() {
+  emit("leave");
+  if (S.bookFrom === "scene" && S.scene) setState({ screen: "scene" }); else openTitle();
+}
+function selectBookName(p) { emit("leave"); setState({ bookSelected: p }); runFx({ t: "hop", midi: midiOf(p) }); }
+function openSettings() { emit("leave"); setState({ settingsFrom: S.screen, screen: "settings", resetPending: false, settingsNote: "", lit: -1 }); }
+function closeSettings() { emit("leave"); setState({ screen: S.settingsFrom || "title" }); }
+function soundTest() { const c = audio(); applyVolume(); if (c && c.state === "running") { silence("hop"); tone("hop", midiOf(P(5)), c.currentTime + 0.02, 0.62, 0.3); } }
+function requestDay(id) {
+  if (id === DAYS[0].id && !store.data.settings.soundChecked ) { emit("leave"); setState({ screen: "sound", pendingDay: id, soundMissing: false }); soundTest(); }
+  else startDay(id);
+}
+function acceptSound() { store.data.settings.soundChecked = true; store.data.settings.tutorialSeen = [...new Set((store.data.settings.tutorialSeen || []).concat(["sound"]))]; store.save(); startDay(S.pendingDay || DAYS[0].id); }
+function applyVolume() { if (master) master.gain.value = store.data.settings.muted ? 0 : Math.max(0, Math.min(1, Number(store.data.settings.volume) || 0)); }
+function changeSetting(key, value) { store.data.settings = Object.assign({}, store.data.settings, { [key]: value }); store.save(); applyVolume(); setState({ settingsNote: "설정을 저장했어요." }); }
+function learnedSigns() { const open = DAYS.filter((d) => dayOpen(d.id)); return open[open.length - 1].signs; }
+function startReview() {
+  const d = new Date(), date = [d.getFullYear(), d.getMonth() + 1, d.getDate()].join("-"), plan = reviewPlan(store.data.causes, learnedSigns(), date);
+  if (!plan) return;
+  const at = BOOK.findIndex((x) => x.id === "rv"); if (at < 0) BOOK.push(plan.day); else BOOK.splice(at, 1, plan.day);
+  openRun("rv", 0, [], [], { dev: true, gained: [], report: null, reviewCauses: plan.assigned, reviewRecommended: false });
+}
+function recommendReview() {
+  const done = DAYS.filter((d) => (store.data.days[d.id] || {}).passed), d = done[done.length - 1]; if (!d) return;
+  openRun(d.id, d.jobs.length - 1, [], [], { dev: true, gained: [], report: null, reviewRecommended: true });
+}
+on("wrong", (code) => { if (S.day === "rv" && S.screen === "run") { store.data.causes = Object.assign({}, store.data.causes, { [code]: (store.data.causes[code] || 0) + 1 }); store.save(); } });
+on("done", (done) => {
+  if (S.day !== "rv") return {};
+  if (done === "full") { const c = S.reviewCauses[S.idx]; store.data.causes = Object.assign({}, store.data.causes, { [c]: Math.max(0, (store.data.causes[c] || 0) - 1) }); }
+  store.save(); return { requeue: [], gained: [] };
+});
+function freeModel(p, win, mode) {
+  const names = spellingsAt(midiOf(p)), day = dayOf("free"), model = jobModel({ id: "free-1", ask: "drop", note: keyOf(p), preview: true }, day);
+  model.win = win; model.names = names; model.board0 = names; model.card = { chip: "자유 마을", text: mode === "write" ? "흰 집과 기호로 주소를 써 봐요." : "집을 누르면 모든 주소를 만나요." };
+  model.env = { label: mode === "write" ? "쓰는 주소" : "주소 " + names.length + "개", name: nameHtml(p), note: mode === "write" ? signKo(p.a) : "한 집" };
+  return model;
+}
+function openFree() {
+  emit("leave"); if (!dayOf("free")) BOOK.push({ id: "free", name: "자유 마을", signs: ALL_SIGNS.slice(), jobs: [{ id: "free-1", ask: "drop", note: keyOf(P(1)) }] });
+  const p = P(1); M = freeModel(p, HOME, "explore");
+  setState({ screen: "free", day: "free", reviewRecommended: false, idx: 0, requeue: [], results: [], dev: true, scene: null, phase: "deliver", freeMode: "explore", freeWin: HOME, freeName: p, board: M.names.slice(), pen: { h: midiOf(p), a: 0 }, pos: midiOf(p), picked: true, lit: -1, mine: null, goal: null, msg: say("", "집을 누르면 같은 집의 주소가 보여요.") });
+}
+function freeChoose(p, mode, win) {
+  emit("leave"); M = freeModel(p, win === undefined ? S.freeWin : win, mode || S.freeMode);
+  const write = (mode || S.freeMode) === "write";
+  setState({ screen: "free", freeName: p, freeMode: mode || S.freeMode, freeWin: M.win, phase: write ? "plate" : "deliver", pos: midiOf(p), board: write ? [] : M.names.slice(), pen: { h: midiOf(anchorOf(p)), a: p.a }, lit: -1, mine: null, goal: null, msg: say("", `${josa(p, "은", "는")} ${walkKo(p)}${p.a ? "이에요" : "이에요"}.`) });
+  runFx({ t: "hop", midi: midiOf(p) });
+}
+function shiftFree(n) { const low = stepOf(P(5, 0, 3)), high = stepOf(P(2, 0, 5)) - WIN + 1, win = Math.max(low, Math.min(high, S.freeWin + n)), midi = Math.max(winLo(win), Math.min(winHi(win), midiOf(S.freeName))), p = midi === midiOf(S.freeName) ? S.freeName : spellingsAt(midi)[0]; freeChoose(p, S.freeMode, win); }
+
+// -- 4 끝 --
+
+// == 5 VIEW ==
+let SP = 10;                                                             // 오선 한 칸(px)
+const built = {};                                                        // 다시 그릴지 가리는 열쇠들
+function measure() {                                                     // 화면 높이에서 모드와 집의 높이를 정한다
+  const h = window.innerHeight, app = $("app"), low = document.body.classList.contains("is-low");
+  const mode = h < 620 || low ? "narrow" : h < 760 ? "base" : "tall";
+  app.dataset.mode = mode;
+  SP = mode === "narrow" ? 10 : mode === "base" ? 11 : 12;
+  app.style.setProperty("--sp", SP + "px");
+  const fixed = SP * 9.6 + 6 + 28 + 26 + 18 + 14;                        // 악보 창, 틈, 문패 줄, 걸음 줄, 구역 띠, 무대의 안쪽 여백과 테두리
+  $("stage").style.maxHeight = "none";
+  const keyH = Math.max(72, Math.min(150, $("stage").offsetHeight - fixed));
+  app.style.setProperty("--keyH", keyH + "px");
+  $("stage").style.maxHeight = fixed + keyH + "px";                       // 높은 화면에서는 무대를 키우지 않고 남는 높이를 위아래에 둔다
+  $("lowScreen").hidden = h >= 545 || low;
+}
+function redraw() { built.staff = built.routes = built.board = ""; render(); }   // 폭이 바뀌었을 때: 폭으로 그린 것을 다시 그린다
+atBoot(20, measure);
+
+// ── 기호와 음표 그림: 글꼴에 기대지 않고 직접 그린다. 단위는 오선 한 칸 = 10 ──
+const G_SHARP = '<path class="gs" stroke-width="1.1" d="M-2.2 -12V14M2.2 -14V12"/><path class="gl" d="M-4.6 -4.3L4.6 -6.7V-3.7L-4.6 -1.3ZM-4.6 3.7L4.6 1.3V4.3L-4.6 6.7Z"/>';
+const G_FLAT = '<path class="gs" stroke-width="1.2" d="M-2.8 -17V6.4"/><path class="gl" fill-rule="evenodd" d="M-2.8 -2.2C-0.5 -6.2 5.4 -6 5 -1.6C4.6 2.2 0.2 4.4 -2.8 6.6ZM-2.2 -0.4C-0.4 -3.4 3 -3.6 2.8 -1.2C2.6 1.2 -0.4 3 -2.2 4.5Z"/>';
+const G_DSHARP = '<path class="gs" stroke-width="1.7" d="M-3.4 -3.4L3.4 3.4M-3.4 3.4L3.4 -3.4"/><path class="gl" d="M-5.4 -5.4h3.2v3.2h-3.2zM2.2 -5.4h3.2v3.2h-3.2zM-5.4 2.2h3.2v3.2h-3.2zM2.2 2.2h3.2v3.2h-3.2z"/>';
+const G_DFLAT = `<g transform="translate(-3.9 0)">${G_FLAT}</g><g transform="translate(3.6 0)">${G_FLAT}</g>`;
+const GLYPH = { "1": G_SHARP, "-1": G_FLAT, "2": G_DSHARP, "-2": G_DFLAT };
+const BOX = { "1": [-5.5, -15, 11, 30], "-1": [-4.6, -18, 11, 26], "2": [-6.5, -6.5, 13, 13], "-2": [-8.6, -18, 19, 26] };   // 기호의 상자
+const EM = { "1": 1.05, "-1": 1.05, "2": 0.72, "-2": 1 };                // 글줄 안에서의 높이(em)
+const ACC_DX = { "1": 1.8, "-1": 1.65, "2": 1.95, "-2": 2.2 };            // 음표 머리 가운데에서 기호 가운데까지(오선 칸)
+const G_CLEF = '<path d="M1.5 5.5C-3.5 6.5 -6 1.5 -2.5 -2.5C0.5 -6 7 -4.5 7.5 2C8 8.5 1.5 12.5 -4 10.5C-10.5 8 -11.5 -3 -5.5 -11C-0.5 -18.5 6.5 -25 6 -35C5.7 -41 2.8 -45.5 0.4 -43C-2.6 -40 -2.2 -31 -0.8 -22C0.6 -12.5 2.2 2 3 11C3.6 17.5 2.5 21.5 -0.5 22.5C-3.5 23.5 -6.2 21.5 -5.8 18.8"/><circle cx="-4.2" cy="18.6" r="2"/>';
+const G_HEAD = '<ellipse class="hd" rx="7.6" ry="5.3"/><ellipse class="hole" rx="3.6" ry="4.5" transform="rotate(-28)"/>';
+const signSvg = (a) => { const b = BOX[a], h = EM[a]; return `<svg class="sg sg${a > 0 ? a : "m" + -a}" viewBox="${b.join(" ")}" style="height:${h}em;width:${((b[2] / b[3]) * h).toFixed(3)}em" aria-hidden="true">${GLYPH[a]}</svg>`; };
+const nameHtml = (p) => `<span class="nm"><span aria-hidden="true">${LETTERS[p.L]}${p.a ? signSvg(p.a) : ""}<span class="oc">${p.o}</span></span><span class="sr">${sayKo(p)}</span></span>`;
+const TOKEN = /⟦([^⟧]+)⟧/g;
+const rich = (text) => text.replace(TOKEN, (x, k) => nameHtml(parse(k)));   // 문구 속 주소 토큰을 그림으로
+
+// ── 길 ──
+function buildStreet() {                                                 // 창이 바뀔 때만 집을 다시 만든다
+  const s = M.win;
+  let h = "", z = "";
+  for (let i = 0; i < WIN; i++) {
+    const p = whiteOfStep(s + i);
+    h += `<button type="button" class="house wh${p.L === 0 && i ? " is-edge" : ""}" data-m="${midiOf(p)}" style="left:${(i / WIN) * 100}%;width:${100 / WIN}%" aria-label="${p.o}구역 ${SOL[p.L]} ${LETTERS[p.L]} 집"><b>${LETTERS[p.L]}</b><span>${SOL[p.L]}</span></button>`;
+  }
+  for (let m = winLo(s); m <= winHi(s); m++) if (!isWhite(m)) h += `<button type="button" class="house bk" data-m="${m}" style="left:${(xOf(m, s) - 0.31 / WIN) * 100}%;width:${(0.62 / WIN) * 100}%" aria-label="${zoneOf(m)}구역 검은 집. ${LETTERS[whiteAt(m - 1).L]}와 ${LETTERS[whiteAt(m + 1).L]} 사이"></button>`;
+  $("houses").innerHTML = h;
+  for (let i = 0; i < WIN;) {
+    const o = whiteOfStep(s + i).o;
+    let j = i;
+    while (j < WIN && whiteOfStep(s + j).o === o) j++;
+    z += `<span style="left:${(i / WIN) * 100}%;width:${((j - i) / WIN) * 100}%">${j - i > 1 ? o + "구역" : o}</span>`;
+    i = j;
+  }
+  $("zones").innerHTML = z;
+}
+const pinMidi = () => (S.phase === "sort" ? null : S.phase === "plate" ? S.pen.h : S.phase === "deliver" ? M.target : S.pos);
+const fromMidi = () => (S.phase === "walk" ? M.from : S.phase === "diag" ? M.mis.from : S.goal ? S.goal.from : S.mine ? S.mine.from : null);
+onPaint(20, () => {                                                      // 진행 점: 그날의 배달 하나에 점 하나. 다시 낸 배달도 제 점에서 한다
+  if (!M) return;
+  const jobs = dayNow().jobs, first = {};
+  if (built.day !== S.day) { built.day = S.day; $("dots").innerHTML = jobs.map(() => "<i></i>").join(""); }
+  S.results.forEach((r) => { if (!(r.id in first)) first[r.id] = r.done; });
+  const now = S.screen === "run" ? queueNow()[S.idx] : -1;
+  $("dots").querySelectorAll("i").forEach((el, i) => { const d = first[jobs[i].id]; el.className = (d ? "is-" + d : "") + (i === now ? " is-now" : ""); });
+});
+onPaint(30, () => {                                                      // 편지 카드: 배달이 바뀔 때만 다시 쓴다
+  if (!M) return;
+  const key = S.screen + "|" + M.job.id + "|" + S.idx;                   // 같은 자리라도 배달이 다르면 다시 쓴다
+  if (built.card === key) return;
+  built.card = key;
+  const c = M.card || cardText(M);
+  $("chip").textContent = c.chip;
+  $("ask").innerHTML = rich(c.text);
+});
+onPaint(40, () => {                                                      // 길: 집은 창이 바뀔 때만 다시 만들고 표시는 클래스로만 바꾼다
+  if (!M) return;
+  if (built.win !== M.win) { built.win = M.win; buildStreet(); }
+  const ph = S.phase, here = pinMidi(), from = fromMidi(), goalOn = ph === "plate" || ph === "sort" || ph === "deliver", idle = (ph === "start" || ph === "drop") && !S.picked;   // idle: 아직 고르지 않았다
+  $("houses").querySelectorAll(".house").forEach((el) => {
+    const x = +el.dataset.m;
+    el.classList.toggle("is-here", x === here && !idle);
+    el.classList.toggle("is-goal", goalOn && x === M.target);
+    el.classList.toggle("is-from", x === from);
+    el.classList.toggle("is-near", !!M.glow && M.glow.includes(x));
+  });
+  $("pin").hidden = here === null;
+  $("pin").classList.toggle("is-idle", idle);
+  if (here !== null) $("pin").style.left = xOf(here, M.win) * 100 + "%";
+});
+
+// ── 악보 창과 봉투 ──
+function staffNotes() {                                                  // 악보에 그릴 음표들
+  const ph = S.phase;
+  if (ph === "plate") {
+    const out = S.board.map((p) => ({ k: keyOf(p), c: "" }));
+    if (S.pen.h !== null) { const w = whiteAt(S.pen.h); out.push({ k: keyOf(P(w.L, S.pen.a || 0, w.o)), c: "is-ghost" }); }
+    return out;
+  }
+  if (ph === "deliver" && !M.hop) return S.board.map((p, i) => ({ k: keyOf(p), c: S.lit === i || S.lit === S.board.length ? "is-lit" : "" }));
+  return [{ k: keyOf(M.note), c: "" }];
+}
+function drawStaff(notes) {
+  const el = $("staff"), W = el.clientWidth || 200, sp = SP, top = 1.9 * sp, bottom = top + 4 * sp;
+  const yOf = (step) => bottom - ((step - STAFF_BOTTOM) * sp) / 2;
+  let g = "";
+  for (let i = 0; i < 5; i++) g += `<line class="ln" x1="0" x2="${W}" y1="${top + i * sp}" y2="${top + i * sp}"/>`;
+  g += `<g class="clef" transform="translate(${1.5 * sp} ${bottom - sp}) scale(${sp / 10})">${G_CLEF}</g>`;
+  const x0 = 3.4 * sp, slot = Math.min(7 * sp, (W - x0 - 0.4 * sp) / 3);  // 자리는 늘 셋. 음표가 늘어도 앞의 음표가 움직이지 않는다
+  notes.forEach((n, i) => {
+    const p = parse(n.k), x = x0 + slot * i + slot * 0.64, y = yOf(stepOf(p));
+    for (const k of ledgers(p)) g += `<line class="ln" x1="${x - 1.25 * sp}" x2="${x + 1.25 * sp}" y1="${yOf(k)}" y2="${yOf(k)}"/>`;
+    g += `<g class="note ${n.c}" data-k="${n.k}">`;
+    if (p.a) g += `<g class="acc" transform="translate(${x - ACC_DX[p.a] * sp} ${y}) scale(${sp / 10})">${GLYPH[p.a]}</g>`;
+    g += `<g class="head" transform="translate(${x} ${y}) scale(${sp / 10})">${G_HEAD}</g></g>`;
+  });
+  el.setAttribute("viewBox", `0 0 ${W} ${9.6 * sp}`);
+  el.setAttribute("aria-label", "악보: " + notes.map((n) => sayKo(parse(n.k))).join(", "));
+  el.innerHTML = g;
+}
+function drawEnvelope() {                                                // 봉투: 주소를 크게, 기호의 읽기를 아래에
+  const ph = S.phase, p = M.note;
+  let label = M.hop ? "출발 집" : "주소", name = p ? nameHtml(p) : "", note = p && p.a && !M.hop ? signKo(p.a) : "";
+  if (M.env) { label = M.env.label; name = M.env.name; note = M.env.note; }   // 발견 장면은 제 봉투를 갖는다
+  else if (ph === "plate") {
+    const w = S.pen.h === null ? null : whiteAt(S.pen.h), a = S.pen.a;
+    label = "쓰는 주소";
+    name = `<span class="nm">${w ? LETTERS[w.L] : "?"}${a === null ? "?" : a ? signSvg(a) : ""}<span class="oc">${w ? w.o : ""}</span></span>`;
+    note = a === null ? "" : signKo(a);
+  } else if (M.show === "staff" && ph !== "deliver") { label = "악보 편지"; name = "?"; note = "악보를 읽어요"; }
+  const html = label + "|" + name + "|" + note;
+  if ($("envelope").dataset.h === html) return;
+  $("envelope").dataset.h = html;
+  $("envLabel").textContent = label; $("envName").innerHTML = name; $("envNote").textContent = note;
+}
+onPaint(50, () => {                                                      // 봉투와 악보. 악보는 내용이나 폭이 바뀔 때만 다시 그린다
+  if (!M) return;
+  drawEnvelope();
+  const notes = staffNotes(), key = SP + "|" + $("staff").clientWidth + "|" + JSON.stringify(notes);
+  if (key !== built.staff) { built.staff = key; drawStaff(notes); }
+});
+onPaint(70, () => {                                                      // 판독 줄: 노드는 그대로 두고 글만 바꾼다
+  const r = $("readout");
+  r.className = S.msg.tone ? "is-" + S.msg.tone : "";
+  if (r.dataset.t !== S.msg.text) { r.dataset.t = S.msg.text; r.innerHTML = "<span>" + rich(S.msg.text) + "</span>"; }
+});
+
+// ── 걸음과 문패 판 ──
+function routeList() {                                                   // 길 위에 그릴 걸음들
+  const ph = S.phase, out = [];
+  if (M.hops) return M.hops.map((h, i) => ({ from: h[0], to: h[0] + h[1], cls: "done" + (S.lit >= 0 && Math.floor(S.lit / 2) === i ? " is-lit" : "") }));   // 발견 장면: 걸음만 그린다
+  if (ph === "walk") out.push({ from: M.from, to: S.pos, cls: "live" });
+  if (ph === "diag") out.push({ from: M.mis.from, to: M.mis.to, cls: "mine" });
+  if (S.mine) out.push({ from: S.mine.from, to: S.mine.to, cls: "mine" });
+  if (S.goal) out.push({ from: S.goal.from, to: S.goal.to, cls: "goal" });
+  if (ph === "plate" && M.preview && !S.mine && S.pen.h !== null && S.pen.a !== null) out.push({ from: S.pen.h, to: S.pen.h + S.pen.a, cls: "live" });
+  if (ph === "deliver" && M.hop) out.push({ from: M.from, to: M.target, cls: "done" });
+  if (ph === "deliver" && !M.hop) S.board.forEach((b, k) => out.push({ from: midiOf(anchorOf(b)), to: midiOf(b), cls: "done" + (S.lit === k || S.lit === S.board.length ? " is-lit" : "") }));
+  return out;
+}
+function drawRoutes() {
+  const el = $("routes"), W = el.clientWidth, base = 24, list = routeList(), key = W + "|" + M.win + "|" + JSON.stringify(list);
+  if (key === built.routes) return;
+  built.routes = key;
+  let g = "";
+  for (const r of list) {
+    const sg = Math.sign(r.to - r.from), lift = r.cls === "goal" ? 12 : r.cls === "mine" ? 7 : 10, xe = xOf(r.to, M.win) * W;
+    if (!sg) { g += `<g class="r-${r.cls}"><circle cx="${xe.toFixed(1)}" cy="${base - 6}" r="4"/></g>`; continue; }    // 걷지 않았다: 출발 집에 점 하나
+    let d = "";
+    for (let a = r.from; a !== r.to; a += sg) {                           // 한 칸에 호 하나. 호의 수가 걸음 수다
+      const x1 = xOf(a, M.win) * W, x2 = xOf(a + sg, M.win) * W;
+      d += `M${x1.toFixed(1)} ${base}Q${((x1 + x2) / 2).toFixed(1)} ${base - lift * 2} ${x2.toFixed(1)} ${base}`;
+    }
+    g += `<g class="r-${r.cls}" data-hops="${Math.abs(r.to - r.from)}"><path d="${d}"/><polygon points="${(xe - 4).toFixed(1)},${base - 6} ${(xe + 4).toFixed(1)},${base - 6} ${xe.toFixed(1)},${base + 1}"/></g>`;
+  }
+  el.setAttribute("viewBox", `0 0 ${W} 26`);
+  el.innerHTML = g;
+}
+function drawBoard(on) {                                                 // 도착 집 위의 문패 판
+  const el = $("board");
+  el.hidden = !on || M.hop || !!M.hops;                                  // 걸음만 보여 주는 장면에는 문패 판이 없다
+  if (el.hidden) { built.board = ""; return; }
+  const left = S.phase === "plate" ? M.board0.length + M.todo - S.board.length : 0;
+  const W = $("boardRow").clientWidth, key = W + "|" + M.win + "|" + S.board.map(keyOf).join() + "|" + left + "|" + S.lit;
+  if (key === built.board) return;
+  built.board = key;
+  el.innerHTML = S.board.map((p, i) => `<span class="plate${S.lit === i || S.lit === S.board.length ? " is-lit" : ""}">${nameHtml(p)}</span>`).join("") + '<span class="slot">?</span>'.repeat(left);
+  const w = el.offsetWidth;
+  el.style.left = Math.max(0, Math.min(W - w, xOf(M.target, M.win) * W - w / 2)) + "px";
+}
+onPaint(60, () => {
+  if (!M) return;
+  drawRoutes();
+  drawBoard(S.phase === "plate" || S.phase === "sort" || S.phase === "deliver");
+});
+
+// ── 조작부 ──
+const MAIN = { start: "여기서 출발", walk: "배달", drop: "배달", plate: "문패 달기", sort: "확정", diag: "까닭을 골라요" };
+atBoot(10, () => {                                                       // 기호 단추와 까닭 단추는 한 번만 만든다
+  $("setSign").innerHTML = [-2, -1, 0, 1, 2].map((a) => `<button type="button" data-a="${a}" aria-label="${signKo(a)}" aria-pressed="false">${a ? signSvg(a) : '<span class="sg0">–</span>'}<i>${a ? signKo(a) : "없음"}</i></button>`).join("");
+  $("setCause").innerHTML = CAUSES.map((c) => `<button type="button" data-c="${c}">${CAUSE_KO[c]}</button>`).join("");
+});
+onPaint(80, () => {                                                      // 조작부: 묶음 다섯은 미리 있고 보이기만 바꾼다
+  if (!M) return;
+  const ph = S.phase, scene = S.screen === "scene";
+  const sets = { setMove: ph === "start" || ph === "walk" || ph === "drop", setSign: ph === "plate", setCards: ph === "sort", setCause: ph === "diag", setListen: ph === "deliver" };
+  for (const id in sets) $(id).hidden = !sets[id];
+  $("again").textContent = scene ? "들어 보기" : "다시 듣기";
+  $("main").textContent = scene ? (S.scene.line + 1 < M.lines.length ? "다음" : "알겠어요") : ph === "deliver" ? (S.idx === queueNow().length - 1 ? "마감하기" : "다음 배달") : MAIN[ph];
+  $("main").disabled = ph === "diag";
+  if (built.cards !== built.card) {                                      // 카드 단추는 배달이 바뀔 때만 다시 만든다
+    built.cards = built.card;
+    $("setCards").innerHTML = (M.cards || []).map((c, i) => `<button type="button" data-i="${i}" aria-pressed="false">${nameHtml(c)}</button>`).join("");
+  }
+  $("setSign").querySelectorAll("button").forEach((b) => { const a = +b.dataset.a; b.disabled = !M.day.signs.includes(a); b.setAttribute("aria-pressed", String(ph === "plate" && S.pen.a === a)); });
+  $("setCards").querySelectorAll("button").forEach((b, i) => { const off = S.off.includes(i); b.disabled = off; b.classList.toggle("is-off", off); b.setAttribute("aria-pressed", String(!!S.picks[i])); });
+  $("setCause").querySelectorAll("button").forEach((b) => { const off = ph === "diag" && S.off.includes(b.dataset.c); b.disabled = off; b.classList.toggle("is-off", off); });
+});
+// -- 5 끝 --
+
+// == 6 AUDIO ==
+// 합성음만 쓴다. 오디오 클록에 한 번에 예약하고 묶음으로 취소한다.
+let ctx = null, master = null, wave = null, noiseBuf = null, noAudio = false;
+const live = { hop: new Set(), listen: new Set(), fx: new Set() };       // 울리고 있거나 예약된 음들. 묶음마다 한꺼번에 끊는다
+function soundUi() { const ok = !!ctx && ctx.state === "running"; $("soundChip").hidden = ok; $("hud").classList.toggle("is-nosound", !ok); }
+function onAudioState() { soundUi(); emit("audio"); }                    // 컨텍스트의 상태가 바뀌었다
+function wire(c) {                                                       // 컨텍스트에 마스터, 음색, 잡음을 건다
+  ctx = c;
+  master = c.createGain(); master.gain.value = 0.8; master.connect(c.destination);
+  wave = c.createPeriodicWave(new Float32Array(7), new Float32Array([0, 1, 0.5, 0.3, 0.16, 0.08, 0.04]));   // 1~6배음. 폰 스피커에서도 높이가 들리게
+  noiseBuf = c.createBuffer(1, c.sampleRate, c.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  c.addEventListener("statechange", onAudioState);
+}
+function audio() {                                                       // 컨텍스트를 돌려준다. 없으면 만들고 멈춰 있으면 깨운다. 쓸 수 없으면 null
+  if (noAudio) return null;
+  try {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (navigator.audioSession) { try { navigator.audioSession.type = "playback"; } catch (e) { /* 바꿀 수 없으면 그대로 간다 */ } }   // iPhone의 무음 스위치
+      wire(new AC());
+    }
+    if (ctx.state !== "running") { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); }
+    soundUi();
+    return ctx;
+  } catch (e) { return null; }
+}
+const keep = (group, node) => { live[group].add(node); node.addEventListener("ended", () => live[group].delete(node)); };
+const silence = (group) => { live[group].forEach((x) => { try { x.stop(); } catch (e) { /* 이미 끝남 */ } }); live[group].clear(); };
+function tone(group, midi, when, dur, peak) {                            // 집의 소리. 주소가 달라도 집이 같으면 같은 함수, 같은 값이다
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.setPeriodicWave(wave); o.frequency.setValueAtTime(hz(midi), when);
+  g.gain.setValueAtTime(0.0001, when); g.gain.linearRampToValueAtTime(peak, when + 0.012);
+  g.gain.setValueAtTime(peak, when + Math.max(0.03, dur - 0.12)); g.gain.linearRampToValueAtTime(0.0001, when + dur);
+  o.connect(g); g.connect(master); o.start(when); o.stop(when + dur + 0.03); keep(group, o);
+}
+function burst(when, dur, freq, q, peak) {                               // 효과음은 잡음으로 만든다. 음높이가 없다
+  const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  s.buffer = noiseBuf; f.type = "bandpass"; f.frequency.value = freq; f.Q.value = q;
+  g.gain.setValueAtTime(peak, when); g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+  s.connect(f); f.connect(g); g.connect(master); s.start(when); s.stop(when + dur + 0.02); keep("fx", s);
+}
+function runFx(fx) {                                                     // 흐름이 낸 소리 지시를 실행한다
+  if (fx.t === "listen") return emit("listen");
+  const a = audio();
+  if (!a || a.state !== "running") return;
+  const t = a.currentTime + 0.01;
+  if (fx.t === "hop") { silence("hop"); tone("hop", fx.midi, t, 0.24, 0.28); }
+  else if (fx.t === "stamp") { burst(t, 0.05, 2400, 1.2, 0.22); burst(t + 0.02, 0.12, 180, 0.8, 0.5); }
+  else if (fx.t === "nope") { burst(t, 0.07, 520, 2, 0.2); burst(t + 0.11, 0.07, 420, 2, 0.2); }
+}
+const Snd = {                                                            // 검사가 가짜 컨텍스트를 끼우는 자리
+  swap(fake) {                                                           // fake: 컨텍스트를 흉내 낸 것. null이면 "소리를 쓸 수 없다". 되돌리는 함수를 돌려준다
+    const was = { ctx, master, wave, noiseBuf, noAudio };
+    for (const g in live) silence(g);
+    if (fake) { noAudio = false; wire(fake); } else { ctx = null; noAudio = true; }
+    soundUi();
+    return () => { for (const g in live) silence(g); ctx = was.ctx; master = was.master; wave = was.wave; noiseBuf = was.noiseBuf; noAudio = was.noAudio; soundUi(); };
+  },
+};
+atBoot(25, soundUi);
+// -- 6 끝 --
+
+// == 7 RUN ==
+// 듣기: 주소를 차례로, 그리고 함께. 모든 음을 한 번에 예약하고 화면은 소리 시계를 읽어 따라간다.
+let run = null, raf = 0;
+let nowMs = () => performance.now();                                     // 화면 시계. 검사가 갈아 끼운다
+const STEP = 0.8;                                                        // 듣기에서 주소 하나가 차지하는 초
+const clock = () => ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0);   // 지금 들리는 시각
+function beginListen() {
+  stopRun();
+  const a = audio(), plan = M.tune || (M.hop ? { mids: [M.from, M.target], together: false } : { mids: S.board.map(midiOf), together: S.board.length > 1 });   // M.tune: 발견 장면이 정한 음
+  const mids = plan.mids, n = mids.length, together = plan.together;
+  const t0 = (a ? a.currentTime : nowMs() / 1000) + 0.15;
+  if (a) {
+    silence("hop");
+    mids.forEach((x, k) => tone("listen", x, t0 + k * STEP, 0.62, 0.3));
+    if (together) mids.forEach((x) => tone("listen", x, t0 + n * STEP, 1.1, 0.3 / n));     // 같은 집이면 함께 내도 한 소리다
+  }
+  run = { t0, n, together, end: t0 + n * STEP + (together ? 1.3 : 0.1), perf: !a, c0: a ? a.currentTime : 0, p0: nowMs(), lastNow: -1, lastAt: nowMs() };
+  raf = requestAnimationFrame(frame);
+}
+function frame() {
+  const r = run;
+  if (!r) return;
+  if (!r.perf && nowMs() - r.p0 > 1200 && ctx.currentTime === r.c0) {    // 소리 시계가 움직이지 않으면 화면 시계로 이어 간다
+    const shift = nowMs() / 1000 + 0.1 - r.t0;
+    r.perf = true; r.t0 += shift; r.end += shift; silence("listen");
+  }
+  const now = r.perf ? nowMs() / 1000 : clock();
+  if (!r.perf) {                                                         // 시작한 뒤에 소리 시계가 0.8초 넘게 서 있으면 멈춘다
+    if (now !== r.lastNow) { r.lastNow = now; r.lastAt = nowMs(); }
+    else if (ctx.currentTime !== r.c0 && nowMs() - r.lastAt > 800) return abortRun("stall");
+  }
+  if (now >= r.end) {
+    run = null; raf = 0;
+    return setState({ lit: -1, msg: M.lines ? say("", M.lines[S.scene.line]) : say("good", r.together ? sameKo(S.board) : reason(M, S.board)) });
+  }
+  if (!M.hop) {
+    const k = now < r.t0 ? -1 : Math.min(r.together ? r.n : r.n - 1, Math.floor((now - r.t0) / STEP));
+    if (k !== S.lit) setState(r.together && k >= 0 ? { lit: k, msg: say("good", listenLabel(S.board, k)) } : { lit: k });
+  }
+  raf = requestAnimationFrame(frame);
+}
+function stopRun() { cancelAnimationFrame(raf); raf = 0; run = null; silence("listen"); }
+const abortText = (why, btn) => (why === "hidden" ? `화면을 떠나서 듣기를 멈췄어요. ${btn}를 눌러요.` : `소리가 멈춰서 듣기를 멈췄어요. 소리를 켜고 ${btn}를 눌러요.`);
+function abortRun(why) {                                                 // 듣기를 멈추고 까닭을 알린다
+  stopRun();
+  setState({ lit: -1, msg: say("warn", abortText(why, S.screen === "scene" ? "[들어 보기]" : "[다시 듣기]")) });
+}
+on("listen", beginListen);                                               // 배달이 듣기 단계에 들어섰다
+on("leave", stopRun);                                                    // 무대의 내용이 바뀐다
+on("audio", () => { if (ctx.state !== "running" && run && !run.perf) abortRun("stall"); });
+// -- 7 끝 --
+
+// == 8 INPUT ==
+$("goOn").addEventListener("click", () => { document.body.classList.add("is-low"); measure(); redraw(); });
+let resizeTimer = 0;
+window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { measure(); redraw(); }, 120); });
+$("soundChip").addEventListener("click", () => audio());
+["click", "touchstart", "keydown"].forEach((ev) => window.addEventListener(ev, () => { audio(); }, { passive: true, capture: true }));   // 첫 손짓에 소리를 연다
+$("again").addEventListener("click", () => { if (M && S.phase === "deliver" && (S.screen === "run" || S.screen === "scene")) beginListen(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden && run) abortRun("hidden"); });
+$("houses").addEventListener("click", (e) => { const b = e.target.closest(".house"); if (b) act(F.move(M, S, +b.dataset.m)); });
+$("goLeft").addEventListener("click", () => act(F.nudge(M, S, -1)));
+$("goRight").addEventListener("click", () => act(F.nudge(M, S, 1)));
+$("main").addEventListener("click", () => act(F.confirm(M, S)));
+const typing = (e) => !M || (S.screen !== "run" && S.screen !== "scene") || e.metaKey || e.ctrlKey || e.altKey;   // 키보드를 받지 않을 때
+window.addEventListener("keydown", (e) => {
+  if (typing(e)) return;
+  const k = e.key, el = document.activeElement, onControl = el && el.tagName === "BUTTON" && !el.classList.contains("house");
+  if (k === "ArrowLeft" || k === "ArrowRight") { e.preventDefault(); act(F.nudge(M, S, k === "ArrowLeft" ? -1 : 1)); }
+  else if (k === "Enter" && !onControl) { e.preventDefault(); if (!$("main").disabled) act(F.confirm(M, S)); }
+});
+$("restart").addEventListener("click", () => openRun(S.day, 0, [], [], { gained: [], report: null }));
+$("setSign").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) act(F.sign(M, S, +b.dataset.a)); });
+$("setCards").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) act(F.pick(M, S, +b.dataset.i)); });
+$("setCause").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) act(F.cause(M, S, b.dataset.c)); });
+window.addEventListener("keydown", (e) => {                              // 위아래 화살표로 기호를, 숫자 1~5로 기호·카드·까닭을 고른다
+  if (typing(e) || S.screen !== "run") return;
+  const k = e.key;
+  if ((k === "ArrowUp" || k === "ArrowDown") && S.phase === "plate") {
+    e.preventDefault();
+    act(F.sign(M, S, S.pen.a === null ? 0 : S.pen.a + (k === "ArrowUp" ? 1 : -1)));
+  } else if (/^[1-5]$/.test(k)) {
+    const i = +k - 1;
+    if (S.phase === "sort" && i < M.cards.length) act(F.pick(M, S, i));
+    else if (S.phase === "diag" && i < CAUSES.length) act(F.cause(M, S, CAUSES[i]));
+    else if (S.phase === "plate") act(F.sign(M, S, i - MAXA));
+  }
+});
+$("mapList").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b && !b.disabled) startDay(b.dataset.d); });
+$("mapResume").addEventListener("click", () => { if (!resume()) showMap(""); });
+$("exitBtn").addEventListener("click", () => showMap(store.data.active && store.persistent ? "여기까지 저장했어요. [이어서 배달]로 돌아와요." : ""));   // 배달 도중에 나간다. 묻지 않는다
+$("toMap").addEventListener("click", () => showMap(""));
+$("startBtn").addEventListener("click", () => { if (!resume()) showMap(""); });
+$("titleBook").addEventListener("click", () => openBook("title"));
+$("titleFree").addEventListener("click", openFree);
+$("titleSettings").addEventListener("click", openSettings);
+$("mapBack").addEventListener("click", openTitle);
+$("mapSettings").addEventListener("click", openSettings);
+$("bookBack").addEventListener("click", closeBook);
+$("settingsBack").addEventListener("click", closeSettings);
+$("hudSettings").addEventListener("click", openSettings);
+$("soundAgain").addEventListener("click", soundTest);
+$("soundYes").addEventListener("click", acceptSound);
+$("soundSkip").addEventListener("click", acceptSound);
+$("soundNo").addEventListener("click", () => setState({ soundMissing: true }));
+$("reloadBtn").addEventListener("click", () => location.reload());
+$("bookHouses").addEventListener("click", (e) => { const b = e.target.closest("button[data-name]"); if (b && !b.disabled) selectBookName(parse(b.dataset.name)); });
+$("bookScenes").addEventListener("click", (e) => { const b = e.target.closest("button[data-scene]"); if (b && !b.disabled) openScene(SCENES.find((sc) => sc.id === b.dataset.scene), "book"); });
+$("reviewBtn").addEventListener("click", startReview);
+$("reviewRecommend").addEventListener("click", recommendReview);
+$("sceneBook").addEventListener("click", () => openBook("scene"));
+$("volume").addEventListener("input", (e) => { changeSetting("volume", Number(e.target.value)); soundTest(); });
+$("muted").addEventListener("change", (e) => changeSetting("muted", e.target.checked));
+$("motion").addEventListener("change", (e) => changeSetting("motion", e.target.value));
+$("tutorialReset").addEventListener("click", () => { changeSetting("tutorialSeen", []); setState({ settingsNote: "다음 배달에서 안내를 다시 보여 드려요." }); });
+$("soundReset").addEventListener("click", () => { changeSetting("soundChecked", false); setState({ settingsNote: "0단을 시작할 때 소리를 다시 확인해요." }); });
+$("resetAsk").addEventListener("click", () => setState({ resetPending: true }));
+$("resetNo").addEventListener("click", () => setState({ resetPending: false }));
+$("resetYes").addEventListener("click", () => { store.reset(); applyVolume(); openTitle(); });
+$("freeLeft").addEventListener("click", () => shiftFree(-1));
+$("freeRight").addEventListener("click", () => shiftFree(1));
+$("freeMode").addEventListener("click", () => freeChoose(S.freeName, S.freeMode === "write" ? "explore" : "write"));
+window.addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.closest("#mapList") && b.dataset.d && !b.disabled) { e.stopImmediatePropagation(); requestDay(b.dataset.d); return; }
+  if ((S.day === "rv" || S.reviewRecommended) && (b.id === "exitBtn" || b.id === "toMap")) { e.stopImmediatePropagation(); openBook("title"); return; }
+  if (S.screen !== "free") return;
+  if (b.classList.contains("house")) { e.stopImmediatePropagation(); const midi = +b.dataset.m, p = S.freeMode === "write" ? whiteAt(midi) : spellingsAt(midi)[0]; if (p) freeChoose(S.freeMode === "write" ? P(p.L, S.pen.a || 0, p.o) : p); }
+  else if (b.closest("#setSign")) { e.stopImmediatePropagation(); const p = whiteAt(S.pen.h); freeChoose(P(p.L, +b.dataset.a, p.o)); }
+  else if (b.id === "main" || b.id === "again") { e.stopImmediatePropagation(); if (S.freeMode === "write") freeChoose(S.freeName, "explore"); else beginListen(); }
+  else if (b.id === "exitBtn") { e.stopImmediatePropagation(); openTitle(); }
+}, true);
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && S.screen === "settings") { e.preventDefault(); closeSettings(); }
+  else if (e.key === "Escape" && S.screen === "book") { e.preventDefault(); closeBook(); }
+  else if (e.key === "Escape" && S.screen === "free") { e.preventDefault(); openTitle(); }
+  else if (S.screen === "free" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    if (["ArrowLeft", "ArrowRight"].includes(e.key)) { e.preventDefault(); const lo = winLo(S.freeWin), hi = winHi(S.freeWin), midi = Math.max(lo, Math.min(hi, midiOf(S.freeName) + (e.key === "ArrowLeft" ? -1 : 1))); freeChoose(spellingsAt(midi)[0], "explore"); }
+    else if (e.key === "Enter" && document.activeElement.tagName !== "BUTTON") { e.preventDefault(); if (S.freeMode === "write") freeChoose(S.freeName, "explore"); else beginListen(); }
+  }
+});
+window.addEventListener("click", applyVolume, { capture: true, passive: true });
+window.addEventListener("touchstart", applyVolume, { capture: true, passive: true });
+window.addEventListener("keydown", applyVolume, { capture: true, passive: true });
+function showFatal() { if (S.screen !== "error") { emit("leave"); setState({ screen: "error" }); } }
+window.addEventListener("error", showFatal);
+window.addEventListener("unhandledrejection", showFatal);
+
+// -- 8 끝 --
+
+// == 9 STORAGE ==
+const SAVE_KEY = "twn_save_v1";
+const blankSave = () => ({ version: 1,
+  settings: { volume: 0.8, muted: false, motion: "system", tutorialSeen: [], soundChecked: false },
+  days: {}, plates: [], scenes: [], causes: {}, stats: { jobs: 0, clean: 0 }, active: null });
+function healSave(raw) {                                                 // 빠진 필드만 기본값으로 채운다. 있는 값은 지킨다
+  const base = blankSave(), isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+  const out = Object.assign({}, base, raw, { version: 1 });
+  out.settings = Object.assign(base.settings, isObj(raw.settings) ? raw.settings : {});
+  out.stats = Object.assign(base.stats, isObj(raw.stats) ? raw.stats : {});
+  for (const k of ["plates", "scenes"]) if (!Array.isArray(out[k])) out[k] = [];
+  for (const k of ["days", "causes"]) if (!isObj(out[k])) out[k] = {};
+  if (!isObj(out.active)) out.active = null;
+  return out;
+}
+function readSave(text) {                                                // 저장된 글자를 읽는다. 못 읽으면 기본값과 그 까닭을 돌려준다
+  if (text === null || text === undefined || text === "") return { save: blankSave(), why: "" };
+  try {
+    const raw = JSON.parse(text);
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { save: blankSave(), why: "broken" };
+    if (raw.version > 1) return { save: blankSave(), why: "newer" };
+    return { save: healSave(raw), why: "" };
+  } catch (e) { return { save: blankSave(), why: "broken" }; }
+}
+function makeStore(backend) {                                            // backend(): localStorage 같은 것을 돌려준다. 던지면 메모리에만 둔다
+  const st = { data: blankSave(), persistent: true, hold: false, why: "",
+    load() {
+      try {
+        const text = backend().getItem(SAVE_KEY), r = readSave(text);
+        if (r.why) backend().setItem(SAVE_KEY + "_backup", text);         // 읽지 못한 원본은 남겨 둔다
+        st.data = r.save; st.why = r.why;
+      } catch (e) { st.persistent = false; st.data = blankSave(); }
+      return st.data;
+    },
+    save() {                                                             // 저장했으면 true
+      if (!st.persistent || st.hold) return false;
+      try { backend().setItem(SAVE_KEY, JSON.stringify(st.data)); return true; } catch (e) { st.persistent = false; return false; }
+    },
+    reset() { st.data = blankSave(); return st.save(); },
+  };
+  return st;
+}
+const store = makeStore(() => window.localStorage);
+atBoot(30, () => store.load());
+// -- 9 끝 --
+
+// == 10 SCREENS ==
+onPaint(10, () => {                                                      // 겹쳐 뜨는 화면이 떠 있는 동안 뒤의 배달 화면은 쓸 수 없게 둔다
+  $("closing").hidden = S.screen !== "close";
+  $("app").inert = S.screen !== "run" && S.screen !== "scene";
+});
+onPaint(90, () => {                                                      // 마감: 그날의 배달마다 첫 번째 결과
+  if (S.screen !== "close") return;
+  const jobs = dayNow().jobs, first = {};
+  S.results.forEach((r) => { if (!(r.id in first)) first[r.id] = r.done; });
+  $("closeSum").textContent = `한 번에 배달한 편지 ${jobs.filter((j) => first[j.id] === "full").length}/${jobs.length}`;
+  $("closeList").innerHTML = jobs.map((j, i) => `<li><i class="rec is-${first[j.id] || "none"}"></i>${i + 1}. ${rich(cardText(jobModel(j, dayNow())).text)}</li>`).join("");
+});
+const plateHtml = (k) => { const a = +k.slice(1); return `<span class="nm"><span aria-hidden="true">${k[0]}${a ? signSvg(a) : ""}</span><span class="sr">${k[0]}${a ? " " + signKo(a) : ""}</span></span>`; };   // 문패: 글자와 기호
+onPaint(91, () => {                                                      // 마감: 통과와 도장, 새 문패
+  if (S.screen !== "close" || !S.report) return;
+  const r = S.report;
+  const line = r.stamp === 2 ? "모두 한 번에 배달했어요. 한 번에 배달 도장을 받았어요." : r.passed ? "통과했어요. 도장을 받았어요."
+    : `한 번에 배달한 편지가 ${r.need}통이면 다음 배달일이 열려요.`;
+  $("closeNote").innerHTML = line + (S.gained.length ? `<br>새 문패 ${S.gained.length}개: ${S.gained.map(plateHtml).join(" ")}` : "") + (S.dev ? "<br>바로가기로 열어서 기록하지 않았어요." : "");
+});
+onPaint(12, () => {                                                      // 임시 지도: 배달일 여섯과 하던 배달일. 정식 지도가 생기면 이 그리기를 갈아 끼운다
+  $("mapScreen").hidden = S.screen !== "map";
+  $("exitBtn").hidden = $("toMap").hidden = S.dev;                       // 바로가기로 연 창에서는 지도로 가지 않는다
+  if (S.screen !== "map") return;
+  const a = resumePlan(store.data.active), tests = window.__tests || [];
+  $("mapNote").textContent = S.note || (store.why ? "저장된 기록을 읽지 못해 새로 시작했어요. 원본은 따로 남겨 두었어요." : !store.persistent ? "이 기기에서는 기록이 저장되지 않아요." : "배달일을 골라요.");
+  $("mapResume").hidden = !a;
+  if (a) {
+    const d = dayOf(a.day), over = a.index >= queueOf(d.jobs.length, a.requeue).length;
+    $("mapResume").textContent = `이어서 배달: ${DAYS.indexOf(d)}단 ${over ? "마감하기" : a.index + 1 + "번째 편지"}`;
+  }
+  $("mapList").innerHTML = DAYS.map((d, k) => {
+    const rec = store.data.days[d.id], n = d.jobs.length, open = dayOpen(d.id);
+    const status = !open ? `${k - 1}단을 통과하면 열려요` : !rec ? `배달 ${n}건` : `한 번에 배달 ${rec.best}/${n}` + (rec.stamp === 2 ? " · 한 번에 배달 도장" : rec.stamp === 1 ? " · 도장" : ` · ${passNeed(n)}통부터 통과`);
+    return `<li><button type="button" data-d="${d.id}"${open ? "" : " disabled"}><b>${k}단 ${d.name}</b><small>${status}</small></button></li>`;
+  }).join("");
+  $("mapTests").textContent = `자가검사 ${tests.filter((t) => t.pass).length}/${tests.length}`;
+});
+function stampSvg(level) { return `<svg class="stamp-art" viewBox="0 0 48 48" aria-label="${level === 2 ? "한 번에 배달 도장" : "통과 도장"}" role="img"><circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2"/><circle cx="24" cy="24" r="16" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m15 24 6 6 13-14" fill="none" stroke="currentColor" stroke-width="3"/>${level === 2 ? '<path d="m24 5 2 5 5 .3-4 3 1.5 5-4.5-3-4.5 3 1.5-5-4-3 5-.3Z" fill="currentColor"/>' : ""}</svg>`; }
+function bookWalkSvg(p) {
+  const start = midiOf(anchorOf(p)), end = midiOf(p), sg = Math.sign(p.a), x0 = 140 - p.a * 32, x1 = 140 + p.a * 32;
+  let arcs = ""; for (let m = start; m !== end; m += sg) { const a = x0 + (m - start) * 64, b = a + sg * 64; arcs += `<path d="M${a} 34Q${(a + b) / 2} -8 ${b} 34"/>`; }
+  return `<g fill="none" stroke="var(--steel)" stroke-width="2.5">${arcs}<circle cx="${x0}" cy="34" r="4"/><circle cx="${x1}" cy="34" r="5"/></g>`;
+}
+onPaint(11, () => {
+  for (const [id, screen] of [["titleScreen", "title"], ["soundCheck", "sound"], ["bookScreen", "book"], ["settingsScreen", "settings"], ["errorScreen", "error"]]) $(id).hidden = S.screen !== screen;
+  if (S.screen === "free") $("app").inert = false;
+  $("app").dataset.free = String(S.screen === "free");
+  $("hudSettings").hidden = !!S.dev && S.screen !== "free";
+  $("muteBadge").className = store.data.settings.muted ? "mute-on" : "sr";
+  $("muteBadge").hidden = !store.data.settings.muted;
+  if (S.screen === "title") $("startBtn").textContent = resumePlan(store.data.active) ? "이어서 배달" : "배달 시작";
+  if (S.screen === "sound") { $("soundSkip").hidden = !S.soundMissing; $("soundNo").hidden = !!S.soundMissing; $("soundNote").textContent = S.soundMissing ? "폰의 음량과 무음 스위치를 확인해 주세요. 소리 없이도 배달할 수 있어요." : "집의 소리를 들어 봐요. 소리 없이도 배달할 수 있어요."; }
+});
+onPaint(13, () => {
+  if (S.screen !== "map") return;
+  $("mapList").querySelectorAll("button[data-d]").forEach((b) => { const r = store.data.days[b.dataset.d]; if (r && r.stamp) b.insertAdjacentHTML("beforeend", stampSvg(r.stamp)); });
+});
+onPaint(14, () => {
+  if (S.screen !== "book") return;
+  const rows = bookRows(), total = rows.reduce((n, r) => n + r.names.length, 0), have = rows.reduce((n, r) => n + r.names.filter((p) => ownsPlate(p)).length, 0);
+  $("bookCount").textContent = `문패 ${have}/${total}`;
+  const key = store.data.plates.join("|") + "/" + store.data.scenes.join("|");
+  if ($("bookHouses").dataset.key !== key) {
+    $("bookHouses").dataset.key = key;
+    $("bookHouses").innerHTML = rows.map((row) => `<section class="book-house ${isWhite(row.midi) ? "is-white" : "is-black"}"><h3>${isWhite(row.midi) ? SOL[whiteAt(row.midi).L] + " 집" : "검은 집"}</h3>${row.names.map((p) => { const own = ownsPlate(p), d = plateDay(plateKey(p)); return `<button type="button" data-name="${keyOf(p)}"${own ? "" : " disabled"}>${nameHtml(p)}${own ? "" : `<small>${d}단에서 만나요</small>`}</button>`; }).join("")}</section>`).join("");
+    $("bookScenes").innerHTML = SCENES.map((sc) => `<button type="button" data-scene="${sc.id}"${store.data.scenes.includes(sc.id) ? "" : " disabled"}>${store.data.scenes.includes(sc.id) ? sc.title : DAYS.indexOf(sceneDay(sc)) + "단에서 만나요"}</button>`).join("");
+  }
+  if (S.bookSelected) { $("bookRouteText").innerHTML = rich(`${josa(S.bookSelected, "은", "는")} ${walkKo(S.bookSelected)}이에요.`); $("bookWalk").innerHTML = bookWalkSvg(S.bookSelected); }
+  else { $("bookRouteText").textContent = "문패를 누르면 출발 집과 걸음을 볼 수 있어요."; $("bookWalk").innerHTML = ""; }
+  const needs = Object.values(store.data.causes).some((n) => n > 0), done = DAYS.filter((d) => (store.data.days[d.id] || {}).passed);
+  $("reviewBtn").hidden = !needs; $("reviewRecommend").hidden = needs || !done.length;
+  $("reviewNote").textContent = needs ? "헷갈린 까닭에 맞춰 편지 여섯 통을 준비해요." : "복습할 것이 없어요.";
+});
+onPaint(15, () => {
+  if (S.screen !== "settings") return;
+  const v = store.data.settings; $("volume").value = v.volume; $("volumeValue").textContent = Math.round(v.volume * 100) + "%"; $("muted").checked = !!v.muted; $("motion").value = v.motion;
+  $("settingsNote").textContent = S.settingsNote || ""; $("resetConfirm").hidden = !S.resetPending; $("settingsTests").textContent = window.__testLine || "검사를 준비해요.";
+  $("settingsFails").innerHTML = (window.__tests || []).filter((t) => !t.pass).map((t) => `<li>${t.id} ${t.name}</li>`).join(""); $("settingsStorage").textContent = store.persistent ? "이 기기에 배달 기록을 저장해요." : "이 기기에서는 기록이 저장되지 않아요.";
+});
+onPaint(81, () => {
+  $("setFree").hidden = S.screen !== "free" || S.freeMode === "write";
+  $("sceneBook").hidden = !(S.screen === "scene" && S.scene.id === "S6" && S.scene.line === M.lines.length - 1);
+  if (S.screen !== "free") return;
+  $("exitBtn").hidden = false; $("exitBtn").textContent = "뒤로";
+  for (const id of ["setMove", "setCards", "setCause", "setListen"]) $(id).hidden = true;
+  $("setSign").hidden = S.freeMode !== "write"; $("main").disabled = false; $("main").textContent = S.freeMode === "write" ? "이 주소 살펴보기" : "들어 보기";
+  $("freeMode").textContent = "써 보기";
+  $("freeLeft").disabled = S.freeWin <= stepOf(P(5, 0, 3)); $("freeRight").disabled = S.freeWin >= stepOf(P(2, 0, 5)) - WIN + 1;
+});
+onPaint(93, () => {
+  if (S.screen !== "free") $("exitBtn").textContent = S.day === "rv" || S.reviewRecommended ? "주소록" : "지도";
+  if (S.day === "rv" || S.reviewRecommended) { $("exitBtn").hidden = false; $("toMap").hidden = false; $("toMap").textContent = "주소록으로"; if (S.screen === "close") $("closeNote").textContent = "복습을 마쳤어요. 문패와 도장 기록은 그대로예요."; }
+  else $("toMap").textContent = "지도로";
+  if (S.screen === "close") { const old = $("closeStamp"); if (old) old.remove(); if (S.report && S.report.stamp && S.day !== "rv" && !S.reviewRecommended) { const holder = document.createElement("div"); holder.id = "closeStamp"; holder.innerHTML = stampSvg(S.report.stamp); $("closing").insertBefore(holder, $("closeSum")); } }
+});
+atBoot(35, () => {
+  $("titleBook").disabled = $("titleFree").disabled = $("titleSettings").disabled = false;
+  $("mapScreen").prepend($("mapExtras").querySelector(".map-nav")); $("mapScreen").insertBefore($("futureDays"), $("mapTests"));
+  $("rowA").append($("setFree")); $("setListen").append($("sceneBook")); $("hud").append($("muteBadge"), $("hudSettings"));
+  $("bookKnow").innerHTML = `<div class="know-card">${rich(EXTRA_TEXTS[0])}</div><div class="know-card">${rich(EXTRA_TEXTS[1])}</div><div class="know-card sign-names">${[1, -1, 2, -2].map((a) => `<span>${signSvg(a)}<span>${signKo(a)}<br><small>${Math.abs(a) === 2 ? "겹" : ""}${a > 0 ? "올림표" : "내림표"}</small></span></span>`).join("")}</div>`;
+});
+atBoot(94, () => { Object.assign(window.__twn, { openBook, openFree, openSettings, startReview, reviewPlan, reviewMaterial, bookRows, requestDay }); });
+
+// P28~P31: 그림은 기존 집 노드 위에 한 번만 얹고, 상태 표시는 클래스로 바꾼다.
+const TOWN_WHITE = '<svg class="house-art" viewBox="0 0 60 120" preserveAspectRatio="none" aria-hidden="true"><path d="M3 31L30 9l27 22v5H3Z" fill="#607f91"/><path d="M8 35h44v56H8Z" fill="#f5eee0"/><path d="M25 58h13v33H25Z" fill="#c0d3d9" stroke="#758d9a" stroke-width="1.4"/><path d="M14 43h10v12H14Zm23 0h10v12H37Z" fill="#fffdf8" stroke="#758d9a" stroke-width="1.4"/><path d="M19 43v12m-5-6h10m18-6v12m-5-6h10" stroke="#758d9a" stroke-width="1"/><path d="M13 27l17-13 17 13" fill="none" stroke="#8fa8b5" stroke-width="2"/><circle cx="34" cy="75" r="1.4" fill="#607f91"/></svg>';
+const TOWN_BLACK = '<svg class="house-art" viewBox="0 0 40 72" preserveAspectRatio="none" aria-hidden="true"><path d="M2 20L20 3l18 17v6H2Z" fill="#4e6879"/><path d="M6 26h28v44H6Z" fill="#26323d"/><path d="M11 31h7v10h-7Zm12 0h7v10h-7Z" fill="#f0d998"/><path d="M16 48h10v22H16Z" fill="#607f91"/><path d="M8 24h24" stroke="#8fa8b5" stroke-width="1.3"/></svg>';
+const COURIER_ART = '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M9 26h4v-5H9Zm7 0h4v-5h-4Z" fill="#26323d"/><path class="courier-coat" d="M7 16q7-5 14 0l1 7H6Z" fill="#17627e" stroke="#26323d" stroke-width="1"/><path d="M6 15l4 4m11-4-3 4" fill="none" stroke="#26323d" stroke-width="2" stroke-linecap="round"/><circle cx="14" cy="9" r="6" fill="#f0d2af" stroke="#26323d" stroke-width="1"/><path d="M7 7q1-7 7-6t7 6Z" fill="#17627e" stroke="#26323d" stroke-width="1"/><path d="M6 7h17" stroke="#26323d" stroke-width="2"/><path d="M12 5h4" stroke="#ffd35c" stroke-width="1.6"/><circle class="courier-eye" cx="12" cy="10" r=".7"/><circle class="courier-eye" cx="16" cy="10" r=".7"/><path class="courier-mouth" d="M12 13q2 2 4 0" fill="none" stroke="#26323d" stroke-width="1"/><path d="M18 15h8v7h-8Z" fill="#e5c799" stroke="#26323d" stroke-width="1"/><path d="M19 16l3 2 3-2" fill="none" stroke="#776952" stroke-width=".8"/></svg>';
+const TITLE_TOWN = '<svg viewBox="0 0 380 180" aria-hidden="true"><path d="M0 135q90-35 190 0t190 0v45H0Z" fill="#c4d9d3"/><path d="M22 147h337" stroke="#8aa6ae" stroke-width="10" stroke-linecap="round"/><g fill="#fffdf8" stroke="#607f91" stroke-width="2"><path d="M36 73h54v69H36Z"/><path d="M137 57h72v85h-72Z"/><path d="M258 74h62v68h-62Z"/></g><g fill="#607f91"><path d="M29 73l34-30 34 30Z"/><path d="M128 58l45-39 45 39Z"/><path d="M250 75l39-34 39 34Z"/></g><g fill="#26323d"><path d="M94 95h35v47H94Z"/><path d="M218 90h34v52h-34Z"/></g><g fill="#4e6879"><path d="M90 95l21-20 22 20Z"/><path d="M214 90l21-20 21 20Z"/></g><g fill="#c0d3d9" stroke="#607f91" stroke-width="1.5"><path d="M47 85h12v17H47Zm21 0h12v17H68Zm81-15h16v19h-16Zm33 0h16v19h-16Zm87 16h15v17h-15Zm23 0h15v17h-15Z"/><path d="M57 115h15v27H57Zm107-8h20v35h-20Zm117 8h19v27h-19Z"/></g><g fill="#f0d998"><path d="M102 107h7v12h-7Zm13 0h7v12h-7Zm112-5h7v12h-7Zm12 0h7v12h-7Z"/></g><g fill="none" stroke="#17627e" stroke-width="2" stroke-dasharray="3 4"><path d="M62 159q53-30 111 0t116 0"/></g><g transform="translate(322 115)"><path d="M0 3h23v15H0Z" fill="#fffdf8" stroke="#17627e" stroke-width="2"/><path d="M0 3l11 9L23 3" fill="none" stroke="#17627e" stroke-width="2"/><path d="M10 18v21" stroke="#607f91" stroke-width="3"/></g><g fill="#fff" opacity=".85"><path d="M33 27q0-10 10-10 5-12 17-5 13-5 16 8 10 0 11 9H33Z"/><path d="M264 23q1-9 11-9 8-11 18-2 13-2 14 11Z"/></g><g transform="translate(170 134)"><path d="M0 0h18v13H0Z" fill="#fffdf8" stroke="#17627e" stroke-width="1.4"/><path d="M0 0l9 7 9-7" fill="none" stroke="#17627e" stroke-width="1.4"/></g></svg>';
+const TUTORIAL_LINES = [
+  '소리가 나는지 확인하고 배달을 시작해요.',
+  '밝게 표시한 집을 눌러요. 아직 배달한 것은 아니에요.',
+  '집을 골랐어요. [배달]을 눌러 확정해요.',
+  '아래 단추로 오른쪽 한 칸 걸어요.',
+  '글자와 숫자가 가리키는 흰 집에서 출발해요.',
+  '[여기서 출발]을 누르면 기호만큼 걸을 수 있어요.',
+  '기호는 글자의 흰 집에서 세어요. 한 칸 단추로 걸어요.',
+  '흰 집을 눌러 문패의 글자를 정해요.',
+  '기호 단추로 걸음을 정하고 [문패 달기]를 눌러요.',
+  '같은 집으로 가는 편지를 골라요. [확정]은 고른 뒤에 눌러요.',
+  '잘못 걸은 길을 보고 까닭 단추를 눌러요.'
+];
+function tutorialSpec() {
+  if (S.screen === 'sound') return { id: 'sound', el: $('soundAgain'), text: TUTORIAL_LINES[0], overlay: true };
+  if (!M || S.screen !== 'run' || S.dev || S.idx >= dayNow().jobs.length - 1 || S.flawed || S.phase === 'deliver') return null;
+  const id = M.job.id, h = (m) => document.querySelector('#houses .house[data-m="' + m + '"]');
+  if (id === 'd0-01' && S.phase === 'drop') return { id, el: S.picked ? $('main') : h(M.target), text: TUTORIAL_LINES[S.picked ? 2 : 1] };
+  if (id === 'd0-05' && S.phase === 'walk') return { id, el: S.pos === M.from ? $('goRight') : $('main'), text: S.pos === M.from ? TUTORIAL_LINES[3] : TUTORIAL_LINES[2] };
+  if (id === 'd1-01' && (S.phase === 'start' || S.phase === 'walk')) return { id, el: S.phase === 'start' ? S.picked ? $('main') : h(M.from) : S.pos === M.target ? $('main') : M.steps > 0 ? $('goRight') : $('goLeft'), text: S.phase === 'start' ? TUTORIAL_LINES[S.picked ? 5 : 4] : S.pos === M.target ? TUTORIAL_LINES[2] : TUTORIAL_LINES[6] };
+  if (id === 'd1-03' && S.phase === 'plate') {
+    const remaining = M.rest.find((p) => !S.board.some((q) => sameSpell(p, q)));
+    return { id: id + ':plate', el: S.pen.h === null ? h(midiOf(anchorOf(remaining || M.rest[0]))) : S.pen.a === null ? document.querySelector('#setSign button:not(:disabled)[data-a="' + (remaining || M.rest[0]).a + '"]') : $('main'), text: TUTORIAL_LINES[S.pen.h === null ? 7 : 8] };
+  }
+  if (id === 'd1-06' && S.phase === 'sort') return { id, el: S.picks.some(Boolean) ? $('main') : document.querySelector('#setCards button:not(:disabled)'), text: TUTORIAL_LINES[9] };
+  if (id === 'd3-06' && S.phase === 'diag') return { id, el: document.querySelector('#setCause button:not(:disabled)'), text: TUTORIAL_LINES[10] };
+  return null;
+}
+let artTutorial = null, artHouseNodes = null, artLastPin = null, artLastJob = '';
+function finishTutorial(id) {
+  const seen = store.data.settings.tutorialSeen;
+  if (id && !seen.includes(id) && !store.hold) { seen.push(id); store.save(); }
+}
+onPaint(96, () => {
+  document.body.dataset.motion = store.data.settings.motion || 'system';
+  document.body.classList.toggle('text-large', parseFloat(getComputedStyle(document.documentElement).fontSize) > 19);
+  if ($('houses').firstElementChild !== artHouseNodes) {
+    artHouseNodes = $('houses').firstElementChild;
+    $('houses').querySelectorAll('.house').forEach((el) => { if (!el.querySelector('.house-art')) el.insertAdjacentHTML('afterbegin', el.classList.contains('bk') ? TOWN_BLACK : TOWN_WHITE); });
+  }
+  $('board').querySelectorAll('.slot').forEach((el) => el.setAttribute('aria-hidden', 'true'));
+  const pin = $('pin');
+  if (!pin.firstElementChild) pin.innerHTML = COURIER_ART;
+  pin.classList.toggle('is-joy', S.phase === 'deliver');
+  pin.classList.toggle('is-think', S.tries > 0);
+  const next = pinMidi(), job = M ? M.job.id : '';
+  if (next !== artLastPin && M && job === artLastJob && artLastPin !== null && next !== null && S.screen === 'run') {
+    pin.style.setProperty('--courier-dx', (xOf(artLastPin, M.win) - xOf(next, M.win)) * $('routeRow').clientWidth + 'px');
+    pin.style.animationName = 'none'; void pin.offsetWidth; pin.style.animationName = '';
+  }
+  artLastPin = next; artLastJob = job;
+});
+onPaint(100, () => {
+  document.querySelectorAll('.tutorial-target').forEach((el) => el.classList.remove('tutorial-target'));
+  $('readout').classList.remove('tutorial-readout');
+  const next = tutorialSpec();
+  if (artTutorial && (!next || next.id !== artTutorial.id)) finishTutorial(artTutorial.id);
+  artTutorial = next && !store.data.settings.tutorialSeen.includes(next.id) ? next : null;
+  if (artTutorial && artTutorial.el) {
+    artTutorial.el.classList.add('tutorial-target');
+    if (artTutorial.overlay) {
+      if (!S.soundMissing) $('soundNote').textContent = artTutorial.text;
+    } else {
+      $('readout').classList.add('tutorial-readout');
+      $('readout').dataset.t = 'tutorial:' + artTutorial.text;
+      $('readout').innerHTML = '<span>' + rich(artTutorial.text) + '</span>';
+    }
+  }
+});
+document.addEventListener('click', (e) => {
+  if (!artTutorial || !e.isTrusted) return;
+  const el = e.target.closest('button');
+  if (el && el !== artTutorial.el) { finishTutorial(artTutorial.id); artTutorial = null; setState({}); }
+}, true);
+document.addEventListener('keydown', (e) => {
+  if (artTutorial && e.isTrusted && !['Tab','Shift','Control','Alt','Meta'].includes(e.key)) {
+    if (e.key === 'Escape') { finishTutorial(artTutorial.id); artTutorial = null; setState({}); }
+  }
+}, true);
+let artSpokenPin = '', artFocusLayer = null;
+const artFocusHistory = new Map();
+const artFocusables = (el) => [...el.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),[tabindex="0"]')].filter((b) => !b.hidden && b.getClientRects().length && !b.closest('[hidden],[inert]'));
+onPaint(110, () => {
+  if (location.hash === '#test') return;
+  const layers = [...document.querySelectorAll('.sheet')].filter((el) => !el.hidden && el.getClientRects().length), top = layers[layers.length - 1] || null;
+  for (const el of layers) {
+    el.inert = el !== top;
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', String(el === top));
+    const title = el.querySelector('h1,h2');
+    if (title) { if (!title.id) title.id = el.id + 'Heading'; title.tabIndex = -1; el.setAttribute('aria-labelledby', title.id); }
+  }
+  $('app').inert = !!top || !['run','scene','free'].includes(S.screen);
+  if (top !== artFocusLayer) {
+    const previous = artFocusLayer, candidate = previous && artFocusHistory.get(previous);
+    if (top) {
+      if (candidate && candidate.isConnected && top.contains(candidate) && !candidate.closest('[hidden]')) candidate.focus({preventScroll:true});
+      else {
+        artFocusHistory.set(top, document.activeElement);
+        (artFocusables(top)[0] || top.querySelector('h1,h2') || top).focus({preventScroll:true});
+      }
+    } else if (candidate && candidate.isConnected && !candidate.closest('[hidden]') && !candidate.closest('[inert]')) candidate.focus({preventScroll:true});
+    else if (previous && ['run','scene','free'].includes(S.screen)) $('main').focus({preventScroll:true});
+    artFocusLayer = top;
+  }
+  if (top && !top.contains(document.activeElement)) (artFocusables(top)[0] || top.querySelector('h1,h2') || top).focus({preventScroll:true});
+  if (M && ['run','free'].includes(S.screen) && !top && S.phase !== 'deliver') {
+    const m = pinMidi(), k = S.screen + '|' + S.day + '|' + S.idx + '|' + m;
+    if (m !== null && k !== artSpokenPin) {
+      const house = document.querySelector('#houses .house[data-m="' + m + '"]');
+      $('streetAnnounce').textContent = house ? house.getAttribute('aria-label') : '';
+      artSpokenPin = k;
+    } else if (m === null) $('streetAnnounce').textContent = '';
+  } else $('streetAnnounce').textContent = '';
+});
+document.addEventListener('keydown', (e) => {
+  if (!artFocusLayer || e.defaultPrevented) return;
+  if (e.key === 'Tab') {
+    const list = artFocusables(artFocusLayer), first = list[0], last = list[list.length - 1];
+    if (!first) { e.preventDefault(); return; }
+    if (e.shiftKey && (document.activeElement === first || !artFocusLayer.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (document.activeElement === last || !artFocusLayer.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+  }
+  if (e.key === 'Escape') {
+    const close = artFocusLayer.querySelector('[data-close],.screen-back,[data-back]') || artFocusables(artFocusLayer).find((b) => /^(닫기|돌아|지도로|뒤로)/.test(b.textContent.trim()));
+    if (close) { e.preventDefault(); close.click(); }
+  }
+});
+atBoot(35, () => {
+  const baseTexts = tTexts;
+  tTexts = () => [...new Set(baseTexts().concat(TUTORIAL_LINES))];
+});
+atBoot(65, () => {
+  document.querySelectorAll('.title-art').forEach((el) => { el.innerHTML = TITLE_TOWN; });
+  const sound = $('soundCheck');
+  if (sound) sound.querySelectorAll('button').forEach((b) => { if (!b.getAttribute('aria-label')) b.setAttribute('aria-label', b.textContent.trim()); });
+});
+
+
+// -- 10 끝 --
+
+// == 11 TESTS ==
+const TESTS = [], TOTAL_TESTS = 47, GROUPS = ["TH", "CH", "SC", "JB", "FL", "AU", "ST", "SV", "CT"];
+const test = (id, name, fn) => TESTS.push({ id, name, fn });
+function runTests() {                                                    // 검사마다 { id, name, pass, n, fails }
+  const rank = (t) => GROUPS.indexOf(t.id.slice(0, 2)) * 100 + +t.id.slice(3);   // 묶음 순서, 번호 순서로 돌린다
+  return TESTS.slice().sort((a, b) => rank(a) - rank(b)).map((t) => {
+    const fails = [];
+    let n = 0;
+    const ok = (cond, what) => { n++; if (!cond) fails.push(what); };
+    const eq = (a, b, what) => ok(JSON.stringify(a) === JSON.stringify(b), `${what}: ${JSON.stringify(a)} ≠ ${JSON.stringify(b)}`);
+    try { t.fn(ok, eq); } catch (e) { fails.push("오류: " + (e && e.message)); }
+    return { id: t.id, name: t.name, pass: n > 0 && fails.length === 0, n, fails: fails.slice(0, 5) };
+  });
+}
+function testLine(res) {                                                 // #test의 첫 줄
+  const part = GROUPS.map((g) => { const a = res.filter((r) => r.id.startsWith(g)); return a.length ? `${g} ${a.filter((r) => r.pass).length}/${a.length}` : ""; }).filter(Boolean);
+  return `자가검사 ${res.filter((r) => r.pass).length}/${res.length} (전체 ${TOTAL_TESTS}개 중 ${res.length}개 작성) · ${part.join(" · ")}`;
+}
+function appSource() {                                                   // 검사 구획을 뺀 스크립트의 글자. 소스 점검에 쓴다
+  const s = document.querySelector("script").textContent, a = s.indexOf("\n// == 11 TESTS =="), b = s.indexOf("\n// == 12 BOOT ==");   // 줄 머리의 구획 머리만 찾는다
+  return s.slice(0, a) + s.slice(b);
+}
+function showTests(res) {
+  const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  $("testLine").textContent = testLine(res);
+  $("testList").innerHTML = res.map((r) => `<li class="${r.pass ? "" : "is-fail"}"><i class="rec ${r.pass ? "is-full" : ""}"></i>${r.id} ${esc(r.name)} <small>${r.n}</small>${r.fails.map((f) => `<br><em>${esc(f)}</em>`).join("")}</li>`).join("");
+  $("testPage").hidden = false;
+}
+atBoot(40, () => {
+  const res = runTests();
+  window.__tests = res;
+  window.__testLine = testLine(res);
+  if (location.hash === "#test") showTests(res);
+});
+const fakeStorage = (init, broken) => {                                  // 검사용 저장소
+  const m = Object.assign({}, init);
+  return { m, getItem(k) { if (broken) throw new Error("막힘"); return k in m ? m[k] : null; }, setItem(k, v) { if (broken) throw new Error("막힘"); m[k] = String(v); } };
+};
+
+test("ST-02", "상태를 바꾸는 곳은 setState 하나다", (ok) => {
+  const src = appSource();
+  ok(!/\bS\.[A-Za-z_$][\w$.]*\s*(=(?![=>])|\+=|-=|\+\+|--)/.test(src), "S의 필드에 직접 값을 넣는 곳이 없다");
+  ok((src.match(/Object\.assign\(S\b/g) || []).length === 1, "Object.assign(S, …)는 setState 안의 한 곳뿐이다");
+  ok((src.match(/\bS\s*=(?![=>])/g) || []).length === 1, "S를 만드는 곳은 한 곳이고 다시 대입하지 않는다");
+});
+test("SV-01", "저장을 쓰고 읽으면 같은 값이다", (ok, eq) => {
+  const be = fakeStorage(), a = makeStore(() => be);
+  a.load();
+  a.data.plates.push("C1"); a.data.days.d0 = { passed: true, stamp: 1, runs: 1, best: 6 }; a.data.active = { day: "d1", index: 2, results: [1, 2], requeue: [1] };
+  ok(a.save(), "저장했다");
+  const b = makeStore(() => be);
+  b.load();
+  eq(b.data, a.data, "다시 읽은 값"); eq(b.data.version, 1, "version"); ok(b.persistent, "저장할 수 있다");
+  eq(Object.keys(be.m), ["twn_save_v1"], "저장 열쇠"); eq(JSON.parse(be.m[SAVE_KEY]).version, 1, "저장된 글자의 version");
+  a.hold = true; a.data.plates.push("D-1"); ok(a.save() === false && JSON.parse(be.m[SAVE_KEY]).plates.length === 1, "hold이면 쓰지 않는다");
+});
+test("SV-02", "빠진 필드만 기본값으로 채운다", (ok, eq) => {
+  const be = fakeStorage({ [SAVE_KEY]: JSON.stringify({ version: 1, plates: ["D-1"], settings: { muted: true } }) }), s = makeStore(() => be).load();
+  eq(s.plates, ["D-1"], "있는 값은 지킨다"); eq(s.settings.muted, true, "설정의 있는 값"); eq(s.settings.volume, blankSave().settings.volume, "설정의 빠진 값");
+  eq(s.scenes, [], "빠진 배열"); eq(s.stats, { jobs: 0, clean: 0 }, "빠진 통계"); eq(s.active, null, "하던 배달일 없음"); eq(s.causes, {}, "빠진 까닭 누계"); eq(s.days, {}, "빠진 배달일 기록");
+});
+test("SV-03", "깨진 저장과 더 높은 버전은 기본값으로 시작하고 원본을 남긴다", (ok, eq) => {
+  for (const text of ["{깨진", JSON.stringify({ version: 2, plates: ["X"] }), "[1,2]"]) {
+    const be = fakeStorage({ [SAVE_KEY]: text }), st = makeStore(() => be);
+    eq(st.load(), blankSave(), "기본값으로 시작: " + text); eq(be.m[SAVE_KEY + "_backup"], text, "원본을 남긴다"); ok(st.why === "broken" || st.why === "newer", "까닭을 적는다");
+  }
+  const be = fakeStorage(), st = makeStore(() => be);
+  st.load();
+  ok(!((SAVE_KEY + "_backup") in be.m) && st.why === "", "저장이 없으면 백업도 없다");
+});
+test("SV-04", "저장소가 오류를 던지면 메모리에 둔다", (ok, eq) => {
+  const st = makeStore(() => fakeStorage(null, true));
+  eq(st.load(), blankSave(), "기본값"); ok(!st.persistent, "저장되지 않음을 안다");
+  st.data.plates.push("C1");
+  ok(st.save() === false, "저장은 실패를 알린다"); eq(st.data.plates, ["C1"], "메모리의 값은 남는다");
+  const none = makeStore(() => { throw new Error("막힘"); });
+  none.load();
+  ok(!none.persistent, "저장소 접근이 막혀도 죽지 않는다");
+});
+
+// ── TH 이론, CH 화음, SC 음계 ──
+const tN = (t) => parse(t), tMi = (t) => midiOf(parse(t)), tK = (ps) => ps.map(keyOf);
+const tALL = [];                                                         // 글자 7 × 기호 5 × 구역 0~8 = 315
+for (let o = 0; o <= 8; o++) for (let L = 0; L < 7; L++) for (let a = -MAXA; a <= MAXA; a++) tALL.push(P(L, a, o));
+const tOCT4 = tALL.filter((p) => p.o === 4);
+test("TH-01", "자연음 반음값과 집 번호", (ok, eq) => {
+  eq([0, 1, 2, 3, 4, 5, 6].map(semisOf), [0, 2, 4, 5, 7, 9, 11], "자연음 반음값");
+  eq([tMi("C4"), tMi("A4"), tMi("B3"), tMi("C5"), tMi("C-1")], [60, 69, 59, 72, 0], "기준 집");
+});
+test("TH-02", "주소는 출발 집에서 기호만큼 걷는다", (ok, eq) => {
+  for (const p of tALL) {
+    ok(midiOf(p) - midiOf(anchorOf(p)) === p.a, "걸음 " + keyOf(p));
+    ok(isWhite(midiOf(anchorOf(p))), "출발 집은 흰 집 " + keyOf(p));
+    ok(sameSpell(parse(keyOf(p)), p), "씨앗 왕복 " + keyOf(p));
+    ok(stepOf(anchorOf(p)) === stepOf(p), "기호는 글자 자리를 바꾸지 않는다 " + keyOf(p));
+    eq(walkOf(p), { from: midiOf(anchorOf(p)), steps: p.a, to: midiOf(p) }, "walkOf " + keyOf(p));
+  }
+});
+test("TH-03", "한 집의 주소 수", (ok, eq) => {
+  const twoNamed = new Set();
+  for (let m = 21; m <= 108; m++) {
+    const ss = spellingsAt(m), near = [-2, -1, 0, 1, 2].filter((d) => isWhite(m + d)).length;
+    ok(ss.every((s) => midiOf(s) === m), "모두 같은 집 " + m);
+    ok(new Set(tK(ss)).size === ss.length, "겹침 없음 " + m);
+    ok(ss.length === near, "주소 수 = 두 칸 안의 흰 집 수 " + m);
+    ok(ss.length === (mod(m, 12) === 8 ? 2 : 3), "주소는 셋, 한 곳만 둘 " + m);
+    if (ss.length === 2) twoNamed.add(mod(m, 12));
+  }
+  eq([...twoNamed], [8], "주소가 둘뿐인 집");
+  eq(tK(spellingsAt(68)), ["G#4", "Ab4"], "그 집의 주소");
+});
+test("TH-04", "주소는 모두 35가지", (ok) => {
+  for (let z = 1; z <= 7; z++) {
+    const set = new Set();
+    for (let pc = 0; pc < 12; pc++) spellingsAt(12 * (z + 1) + pc).forEach((s) => set.add(LETTERS[s.L] + s.a));
+    ok(set.size === 35, "구역 " + z + "의 주소 35가지");
+  }
+});
+test("TH-05", "구역 숫자가 갈리는 집", (ok, eq) => {
+  for (let m = 24; m <= 107; m++) {
+    const ds = [...new Set(spellingsAt(m).map((s) => s.o))].sort(), z = zoneOf(m), pc = mod(m, 12);
+    eq(ds, pc <= 1 ? [z - 1, z] : pc >= 10 ? [z, z + 1] : [z], "구역 숫자 " + m);
+  }
+});
+test("TH-06", "초안의 예시", (ok, eq) => {
+  const SAME = [["C#4", "Db4"], ["D#4", "Eb4"], ["F#4", "Gb4"], ["G#4", "Ab4"], ["A#4", "Bb4"], ["E#4", "F4"], ["Fb4", "E4"], ["B#3", "C4"], ["Cb4", "B3"],
+    ["Cx4", "D4"], ["Dx4", "E4"], ["Ebb4", "D4"], ["Bbb4", "A4"], ["Bx3", "C#4"], ["Cbb4", "Bb3"], ["Cx4", "Ebb4"]];
+  for (const [a, b] of SAME) { ok(isEnharmonic(tN(a), tN(b)), a + " = " + b); ok(isEnharmonic(tN(b), tN(a)), b + " = " + a); ok(hz(tMi(a)) === hz(tMi(b)), "주파수 " + a); }
+  ok(!isEnharmonic(tN("C#4"), tN("Db5")) && samePc(tN("C#4"), tN("Db5")), "C#4와 Db5는 구역이 다르다");
+  ok(!isEnharmonic(tN("B#3"), tN("C3")) && tMi("B#3") === 60 && tMi("C3") === 48, "B#3은 C3이 아니다");
+  ok(!isEnharmonic(tN("C#4"), tN("C#4")), "같은 주소는 딴이름이 아니다");
+  eq(tK(spellingsAt(62)), ["D4", "Cx4", "Ebb4"], "D4의 세 주소");
+  eq(tK(spellingsAt(61)), ["C#4", "Db4", "Bx3"], "C#4의 세 주소");
+  eq(tK(spellingsAt(60)), ["C4", "B#3", "Dbb4"], "C4의 세 주소");
+  eq(tK(spellingsAt(58)), ["A#3", "Bb3", "Cbb4"], "Bb3의 세 주소");
+  eq(tK(spellingsAt(61, [0, 1, -1])), ["C#4", "Db4"], "기호를 덜 배운 날의 주소");
+});
+test("TH-07", "주파수", (ok, eq) => {
+  ok(hz(69) === 440 && hz(81) === 880, "A4 = 440");
+  eq([60, 61, 62, 65, 66, 67, 59].map((m) => Math.round(hz(m) * 100) / 100), [261.63, 277.18, 293.66, 349.23, 369.99, 392, 246.94], "기준 주파수");
+});
+test("TH-08", "오선의 자리", (ok, eq) => {
+  eq([STAFF_BOTTOM, STAFF_TOP, stepOf(tN("C4")), stepOf(tN("C#4")), stepOf(tN("Db4")), stepOf(tN("E#4")), stepOf(tN("F4"))], [30, 38, 28, 28, 29, 30, 31], "글자 자리");
+  eq([ledgers(tN("C4")), ledgers(tN("B3")), ledgers(tN("A#3")), ledgers(tN("D4")), ledgers(tN("F5")), ledgers(tN("A5")), ledgers(tN("Cbb4"))], [[28], [28], [28, 26], [], [], [40], [28]], "덧줄");
+});
+test("TH-09", "오답의 까닭", (ok, eq) => {
+  const CODES = ["ok", "octave", "letter", "extra", "stay", "count", "dir"];
+  for (const p of tOCT4) {
+    const w = walkOf(p);
+    for (let c = w.from - 15; c <= w.from + 15; c++) {
+      const r = diagnose(p, c);
+      ok(CODES.includes(r), "까닭 코드");
+      ok((r === "ok") === (c === w.to), "ok는 도착 집뿐 " + keyOf(p) + " " + c);
+      ok((r === "octave") === (c !== w.to && mod(c - w.to, 12) === 0), "octave " + keyOf(p) + " " + c);
+    }
+  }
+  eq([diagnose(tN("C#4"), 60), diagnose(tN("C#4"), 59), diagnose(tN("C#4"), 62), diagnose(tN("Cx4"), 61), diagnose(tN("Cb4"), 71), diagnose(tN("G4"), 68), diagnose(tN("C#4"), 68)],
+    ["stay", "dir", "count", "count", "octave", "extra", "letter"], "까닭 예시");
+  eq([diagStart(tN("C#4"), 60), diagStart(tN("C#4"), 61), diagStart(tN("C#4"), 72), diagStart(tN("C#4"), 62)], ["ok", "black", "octave", "letter"], "출발 집의 까닭");
+});
+test("TH-10", "반송 길", (ok, eq) => {
+  for (const p of tOCT4.filter((x) => x.a)) {
+    for (const k of ["stay", "dir", "count"]) {
+      const r = misroute(p, k);
+      ok(r.to !== midiOf(p) && diagnose(p, r.to) === k, "반송 " + k + " " + keyOf(p));
+    }
+    const o = misroute(p, "octave"), crosses = zoneOf(midiOf(p)) !== p.o;
+    ok(crosses ? o && diagnose(p, o.to) === "octave" : o === null, "구역 반송 " + keyOf(p));
+  }
+  eq(tOCT4.filter((p) => misroute(p, "octave")).map(keyOf), ["Cbb4", "Cb4", "B#4", "Bx4"], "구역 숫자를 넘는 주소");
+  eq([misroute(tN("B#4"), "octave"), misroute(tN("Cb4"), "octave"), misroute(tN("Ax4"), "count"), misroute(tN("Gbb4"), "dir")],
+    [{ from: 59, to: 60 }, { from: 72, to: 71 }, { from: 69, to: 70 }, { from: 67, to: 69 }], "반송 예시");
+});
+test("TH-11", "창", (ok, eq) => {
+  eq([HOME, windowFor([60]), winLo(27), winHi(27), windowFor([58]), winLo(26), winHi(26), windowFor([74]), winLo(28), winHi(28), windowFor([58, 74])], [27, 27, 59, 72, 26, 57, 71, 28, 60, 74, null], "창의 자리");
+  for (const s of [25, 26, 27, 28, 29]) {
+    let prev = -1;
+    for (let m = winLo(s); m <= winHi(s); m++) { const x = xOf(m, s); ok(x > prev && x >= 0 && x <= 1, "가로 자리가 차례로 늘어난다"); prev = x; }
+    ok(Math.abs(xOf(winLo(s), s) - 0.5 / WIN) < 1e-12 && Math.abs(xOf(winHi(s), s) - (WIN - 0.5) / WIN) < 1e-12, "양 끝 흰 집");
+  }
+  ok(Math.abs(xOf(61, 27) - 2 / WIN) < 1e-12, "검은 집은 두 흰 집의 경계");
+});
+test("CH-01", "음정", (ok, eq) => {
+  eq(tK([above(tN("C4"), 3, "M"), above(tN("C4"), 5, "P"), above(tN("C4"), 3, "m"), above(tN("C4"), 5, "d"), above(tN("C4"), 5, "A"), above(tN("C#4"), 3, "M"), above(tN("D#4"), 3, "M")]),
+    ["E4", "G4", "Eb4", "Gb4", "G#4", "E#4", "Fx4"], "음정 예시");
+  ok(above(tN("C4"), 3, "P") === null && above(tN("C4"), 5, "M") === null && above(tN("Bx4"), 3, "M") === null, "만들 수 없는 음정");
+});
+test("CH-02", "3화음은 글자를 하나씩 건너뛴다", (ok, eq) => {
+  const SEMI = { maj: [4, 7], min: [3, 7], dim: [3, 6], aug: [4, 8] }, count = {};
+  for (const kind of Object.keys(TRIAD)) {
+    count[kind] = 0;
+    for (const r of tOCT4) {
+      const t = triad(r, kind);
+      if (!t) continue;
+      count[kind]++;
+      ok(isStacked(t), "쌓기 " + keyOf(r) + kind);
+      eq([midiOf(t[1]) - midiOf(t[0]), midiOf(t[2]) - midiOf(t[0])], SEMI[kind], "반음 구조 " + keyOf(r) + kind);
+      eq(t.map((n) => n.L), [r.L, mod(r.L + 2, 7), mod(r.L + 4, 7)], "글자 " + keyOf(r) + kind);
+    }
+  }
+  eq(count, { maj: 31, min: 31, dim: 29, aug: 27 }, "쓸 수 있는 3화음의 수");
+});
+test("CH-03", "초안의 화음", (ok, eq) => {
+  eq(tK(triad(tN("C#4"), "maj")), ["C#4", "E#4", "G#4"], "C# 장화음");
+  eq(tK(triad(tN("Db4"), "maj")), ["Db4", "F4", "Ab4"], "Db 장화음");
+  eq(tK(triad(tN("D#4"), "maj")), ["D#4", "Fx4", "A#4"], "D# 장화음");
+  eq(tK(triad(tN("Eb4"), "maj")), ["Eb4", "G4", "Bb4"], "Eb 장화음");
+  ok(sameHouses(triad(tN("C#4"), "maj"), triad(tN("Db4"), "maj")) && sameHouses(triad(tN("D#4"), "maj"), triad(tN("Eb4"), "maj")), "같은 집들");
+  const wrong = ["D#4", "G4", "A#4"].map(tN);
+  ok(sameHouses(wrong, triad(tN("D#4"), "maj")) && !isStacked(wrong), "D#-G-A#은 같은 집이지만 3도 쌓기가 아니다");
+  eq(tK(triad(tN("G#4"), "maj")), ["G#4", "B#4", "D#5"], "G# 장화음");
+  eq(tK(triad(tN("Ab4"), "maj")), ["Ab4", "C5", "Eb5"], "Ab 장화음");
+  eq(tK(triad(tN("Db4"), "min")), ["Db4", "Fb4", "Ab4"], "Db 단화음");
+});
+test("CH-04", "딴이름 화음", (ok, eq) => {
+  for (const kind of Object.keys(TRIAD)) for (const r of tOCT4) {
+    const base = triad(r, kind);
+    for (const t of twins(r, kind)) ok(sameHouses(t, base) && isStacked(t) && !sameSpell(t[0], r), "쌍둥이 " + keyOf(r) + kind);
+  }
+  eq(twins(tN("C#4"), "maj").map(tK), [["Db4", "F4", "Ab4"]], "C# 장화음의 쌍둥이");
+  eq(twins(tN("D#4"), "maj").map(tK), [["Eb4", "G4", "Bb4"], ["Fbb4", "Abb4", "Cbb5"]], "D# 장화음의 쌍둥이(이론상 Fbb 장화음도 같은 집이다)");
+  eq(twins(tN("D#4"), "maj").filter((t) => Math.abs(t[0].a) <= 1).map(tK), [["Eb4", "G4", "Bb4"]], "밑음의 기호를 하나까지로 묶으면 Eb 장화음뿐");
+});
+test("SC-01", "음계는 글자를 한 번씩 쓴다", (ok, eq) => {
+  let count = 0;
+  for (const mode of ["major", "minor", "harmonic"]) for (const t of tOCT4) {
+    const s = scale(t, mode);
+    if (!s) continue;
+    count++;
+    ok(new Set(s.map((n) => n.L)).size === 7, "글자 일곱 " + keyOf(t) + mode);
+    ok(s.every((n, i) => i === 0 || stepOf(n) - stepOf(s[i - 1]) === 1), "차례 " + keyOf(t) + mode);
+  }
+  eq(count, 84, "쓸 수 있는 음계의 수");
+  eq(tK(scale(tN("C4"))), ["C4", "D4", "E4", "F4", "G4", "A4", "B4"], "C 장음계");
+  eq(tK(scale(tN("F#4"))), ["F#4", "G#4", "A#4", "B4", "C#5", "D#5", "E#5"], "F# 장음계의 일곱째 음은 E#");
+  eq(tK(scale(tN("A4"), "minor")), ["A4", "B4", "C5", "D5", "E5", "F5", "G5"], "A 자연단음계");
+  eq([keyOf(scale(tN("G#4"), "harmonic")[6]), keyOf(scale(tN("D#4"), "harmonic")[6]), keyOf(scale(tN("A#4"), "harmonic")[6]), keyOf(scale(tN("A4"), "harmonic")[6])], ["Fx5", "Cx5", "Gx5", "G#5"], "화성단음계의 이끎음");
+});
+test("SC-02", "마지막 올림표는 이끎음", (ok) => {
+  let prev = new Set(), tonic = tN("C4");
+  for (let i = 0; i < 7; i++) {
+    tonic = above(tonic, 5, "P");
+    const s = scale(P(tonic.L, tonic.a, 4)), sharps = new Set(s.filter((n) => n.a === 1).map((n) => n.L)), fresh1 = [...sharps].filter((L) => !prev.has(L));
+    ok(sharps.size === i + 1 && fresh1.length === 1 && fresh1[0] === s[6].L, "올림표 " + (i + 1) + "개 " + keyOf(tonic));
+    prev = sharps;
+  }
+});
+test("SC-03", "문맥에 맞는 주소", (ok, eq) => {
+  eq(tK(contextNames(65, triad(tN("C#4"), "maj"))), ["E#4"], "C# 장화음의 3음 자리");
+  eq(tK(contextNames(65, triad(tN("Db4"), "maj"))), ["F4"], "Db 장화음의 3음 자리");
+  eq(tK(contextNames(65, scale(tN("F#4")))), ["E#4"], "F# 장조의 일곱째 음");
+  eq(tK(contextNames(67, triad(tN("D#4"), "maj"))), ["Fx4"], "D# 장화음의 3음 자리");
+  eq(tK(contextNames(65, scale(tN("C4")))), ["F4"], "C 장조");
+  ok(spellingsAt(65).length === 3, "단서가 없으면 세 주소가 모두 맞다");
+});
+
+// ── JB 씨앗, FL 흐름: 조작을 흉내 내어 끝까지 간다 ──
+const tDays = () => DAYS.concat([SPIKE]);
+let tModelMemo = null, tTextMemo = null;
+const tModels = () => tModelMemo || (tModelMemo = Object.fromEntries(tDays().flatMap((d) => d.jobs.map((j) => [j.id, jobModel(j, d)]))));
+const tTokens = (text) => [...text.matchAll(/⟦([^⟧]+)⟧/g)].every((t) => { try { parse(t[1]); return true; } catch (e) { return false; } });
+const tSeen = [];                                                        // 흉내 내는 동안 나온 문구
+let tLastFx = [];                                                        // 마지막 조작이 낸 소리 지시
+const tApply = (S, patch) => { if (!patch) return S; if (patch.msg) tSeen.push(patch.msg.text); tLastFx = patch.fx || []; const o = Object.assign({}, S, patch); delete o.fx; delete o.advance; return o; };
+function tNote(S, ok) { tSeen.push(S.msg.text); ok(S.msg.text.length > 0 && tTokens(S.msg.text), "문구 " + S.msg.text); }
+function tSolve(m, S) {                                                  // 지금 단계를 바르게 푼다
+  const ph = S.phase;
+  if (ph === "start") S = tApply(S, F.move(m, S, m.from));
+  else if (ph === "walk") { while (S.pos !== m.target) S = tApply(S, F.nudge(m, S, Math.sign(m.target - S.pos))); }
+  else if (ph === "drop") S = tApply(S, F.move(m, S, m.target));
+  else if (ph === "plate") {
+    const ans = m.rest.find((n) => !S.board.some((b) => sameSpell(b, n)));
+    S = tApply(S, F.move(m, S, midiOf(anchorOf(ans)))); S = tApply(S, F.sign(m, S, ans.a));
+  } else if (ph === "sort") m.right.forEach((r, i) => { if (r !== S.picks[i]) S = tApply(S, F.pick(m, S, i)); });
+  else if (ph === "diag") return tApply(S, F.cause(m, S, m.cause));
+  return tApply(S, F.confirm(m, S));
+}
+function tSpoil(m, S) {                                                  // 지금 단계에서 한 번 틀린다. 틀릴 수 없으면 null
+  const ph = S.phase;
+  if (ph === "start") { const w = m.from + (m.from + 2 <= winHi(m.win) ? 2 : -2); S = tApply(S, F.move(m, S, isWhite(w) ? w : w - 1)); }
+  else if (ph === "walk") { if (S.pos === m.target) S = tApply(S, F.nudge(m, S, m.steps > 0 ? -1 : 1)); }
+  else if (ph === "drop") S = tApply(S, F.move(m, S, m.target + (m.target + 1 <= winHi(m.win) ? 1 : -1)));
+  else if (ph === "plate") {
+    const ans = m.rest.find((n) => !S.board.some((b) => sameSpell(b, n))), bad = ans.a > -MAXA && m.day.signs.includes(ans.a - 1) ? ans.a - 1 : ans.a + 1;
+    S = tApply(S, F.move(m, S, midiOf(anchorOf(ans)))); S = tApply(S, F.sign(m, S, bad));
+  } else if (ph === "sort") {
+    const i = m.right.findIndex((r, k) => !r && !S.off.includes(k));
+    if (i >= 0) { if (!S.picks[i]) S = tApply(S, F.pick(m, S, i)); }
+    else if (!S.picks.some(Boolean)) return null;
+    else { const j = S.picks.findIndex(Boolean); if (m.right.filter(Boolean).length < 2) return null; S = tApply(S, F.pick(m, S, j)); if (!S.picks.some(Boolean)) return null; }
+  } else if (ph === "diag") { const c = CAUSES.find((x) => x !== m.cause && !S.off.includes(x)); return tApply(S, F.cause(m, S, c)); }
+  return tApply(S, F.confirm(m, S));
+}
+function tPlay(m, wrongs, ok) {                                          // 단계마다 wrongs번 틀린 뒤 푼다. 끝 상태와 지난 단계들
+  let S = fresh(m), guard = 0;
+  const seen = [S.phase];
+  tNote(S, ok);
+  while (S.phase !== "deliver" && guard++ < 60) {
+    const ph = S.phase, boardLen = S.board.length;
+    for (let k = 0; k < wrongs && S.phase === ph && S.board.length === boardLen; k++) { const S2 = tSpoil(m, S); if (!S2) break; S = S2; tNote(S, ok); }
+    if (S.phase === ph) { S = tSolve(m, S); tNote(S, ok); }
+    if (S.phase !== seen[seen.length - 1]) seen.push(S.phase);
+  }
+  return { S, seen };
+}
+function tProbe(m) {                                                     // 채점하지 않는 입력이 내는 문구들
+  const out = [], hear = (p) => { if (p && p.msg) out.push(p.msg.text); };
+  let S = fresh(m), guard = 0;
+  while (S.phase !== "deliver" && guard++ < 20) {
+    const ph = S.phase;
+    if (ph === "start" || ph === "drop" || ph === "sort") hear(F.confirm(m, S));
+    if (ph === "walk") hear(F.move(m, S, m.from));
+    if (ph === "sort" && m.right.filter(Boolean).length > 1) hear(F.confirm(m, Object.assign({}, S, { picks: S.picks.map((v, k) => k === m.right.indexOf(true)) })));   // 덜 골랐다
+    if (ph === "plate") {
+      const black = [m.target - 1, m.target, m.target + 1].find((x) => !isWhite(x) && inWindow(m, x)), b = S.board[0];
+      hear(F.confirm(m, S));
+      if (black !== undefined) hear(F.move(m, S, black));
+      hear(F.confirm(m, Object.assign({}, S, { pen: { h: midiOf(anchorOf(b)), a: b.a } })));
+    }
+    S = tSolve(m, S);
+  }
+  return out;
+}
+function tSlips(m) {                                                     // 단계마다 한 번 틀렸을 때(그리고 이어서 한 번 더) 나올 수 있는 문구 전부. 틀린 집, 카드, 주소, 까닭을 모두 넣어 본다
+  const out = [], hear = (p) => { if (p && p.msg) out.push(p.msg.text); return p; };
+  let S = fresh(m), guard = 0;
+  while (S.phase !== "deliver" && guard++ < 20) {
+    const ph = S.phase, lo = winLo(m.win), hi = winHi(m.win);
+    if (ph === "start" || ph === "drop") for (let x = lo; x <= hi; x++) { const at = Object.assign({}, S, { pos: x, picked: true }), p = hear(F.confirm(m, at)); if (p && p.tries) hear(F.confirm(m, Object.assign({}, at, p))); }
+    if (ph === "walk") for (let d = -MAXA - 1; d <= MAXA + 1; d++) if (inWindow(m, m.from + d)) hear(F.confirm(m, Object.assign({}, S, { pos: m.from + d })));
+    if (ph === "sort") m.cards.forEach((c, i) => hear(F.confirm(m, Object.assign({}, S, { picks: m.cards.map((x, k) => k === i) }))));
+    if (ph === "plate") for (let h = lo; h <= hi; h++) if (isWhite(h)) for (const a of m.day.signs) hear(F.confirm(m, Object.assign({}, S, { pen: { h, a } })));
+    if (ph === "diag") for (const c of CAUSES) { hear(F.cause(m, S, c)); hear(F.cause(m, Object.assign({}, S, { tries: 1 }), c)); }
+    S = tSolve(m, S);
+  }
+  return out;
+}
+function tTexts() {                                                      // 배달 전부에서 나올 수 있는 문구(편지 카드, 판독 줄, 듣기)
+  if (tTextMemo) return tTextMemo;
+  const quiet = () => {}, mark = tSeen.length, out = [];
+  for (const m of Object.values(tModels())) {
+    out.push(cardText(m).text);
+    tProbe(m).forEach((t) => out.push(t));
+    tSlips(m).forEach((t) => out.push(t));
+    for (const w of [0, 1, 2]) { const r = tPlay(m, w, quiet); if (w === 0 && r.S.board.length > 1) { out.push(sameKo(r.S.board)); for (let k = 0; k <= r.S.board.length; k++) out.push(listenLabel(r.S.board, k)); } }
+  }
+  if (typeof SCENES !== "undefined") for (const sc of SCENES) { out.push(sc.title); sceneModel(sc, DAYS.find((d) => d.jobs.some((j) => j.id === sc.after))).lines.forEach((t) => out.push(t)); }   // 발견 장면이 생긴 뒤에는 그 문장도
+  out.push(...EXTRA_TEXTS);
+  return (tTextMemo = [...new Set(out.concat(tSeen.slice(mark)))]);
+}
+test("JB-01", "출제 제약", (ok, eq) => {
+  for (const [id, m] of Object.entries(tModels())) {
+    eq(checkJob(m), [], "제약 " + id);
+    if (m.ask === "fix") { const c = diagnose(m.note, m.mis.to); ok(CAUSES.includes(m.cause) && m.cause === (c === "stay" ? "count" : c), "반송 편지의 까닭이 엔진의 진단과 같다 " + id); }
+  }
+});
+test("JB-02", "배달일의 구성", (ok, eq) => {
+  const days = tDays();
+  eq(DAYS.map((d) => d.jobs.length), [7, 7, 8, 8, 8, 8], "배달 수");
+  for (const d of days) ok(d.jobs.filter((j) => j.final).length === 1 && d.jobs[d.jobs.length - 1].final, "마감 배달은 마지막 " + d.id);
+  ok(new Set(days.flatMap((d) => d.jobs.map((j) => j.id))).size === days.reduce((s, d) => s + d.jobs.length, 0), "번호가 겹치지 않는다");
+  for (const d of DAYS) for (const j of d.jobs) ok(!(j.final && j.preview), "마감 배달에는 미리 보기가 없다 " + j.id);
+});
+test("JB-03", "문패 28개", (ok, eq) => {
+  const got = new Set(), perDay = {};
+  for (const d of DAYS) {
+    perDay[d.id] = [];
+    for (const j of d.jobs) for (const p of platesOf(tModels()[j.id])) { const k = LETTERS[p.L] + ACC[p.a + MAXA]; if (!got.has(k)) { got.add(k); perDay[d.id].push(k); } }
+  }
+  ok(got.size === 28, "문패 28개: " + got.size);
+  eq(Object.values(perDay).map((x) => x.length), [0, 10, 4, 6, 6, 2], "배달일별 새 문패");
+});
+test("JB-04", "새 기호는 걸어서 배운다", (ok) => {
+  for (let i = 1; i < DAYS.length; i++) {
+    for (const a of DAYS[i].signs.filter((x) => !DAYS[i - 1].signs.includes(x))) {
+      const first = DAYS[i].jobs.find((j) => parse(j.note).a === a);
+      ok(first && first.ask === "walk", "새 기호 " + a + "의 첫 배달은 걸어서 " + DAYS[i].id);
+    }
+  }
+});
+test("FL-01", "한 번에 맞히면 ●", (ok, eq) => {
+  for (const [id, m] of Object.entries(tModels())) {
+    const r = tPlay(m, 0, ok);
+    ok(r.S.phase === "deliver" && r.S.done === "full" && !r.S.flawed, "● " + id + " " + r.S.phase + " " + r.S.done);
+    eq(r.seen, phasesOf(m), "단계 순서 " + id);
+    ok(r.S.board.length === m.board0.length + (m.ask === "sort" ? m.right.filter(Boolean).length : m.todo), "문패 수 " + id);
+    ok(r.S.board.every((b) => midiOf(b) === m.target), "문패는 모두 같은 집 " + id);
+    ok(F.confirm(m, r.S).advance === true, "다음 배달로 " + id);
+  }
+});
+test("FL-02", "한 번 틀리면 ◐, 안내를 받는다", (ok) => {
+  for (const [id, m] of Object.entries(tModels())) { const r = tPlay(m, 1, ok); ok(r.S.phase === "deliver" && r.S.done === "half", "◐ " + id + " " + r.S.phase + " " + r.S.done); }
+});
+test("FL-03", "두 번 틀리면 고쳐 주고 ◐", (ok, eq) => {
+  for (const [id, m] of Object.entries(tModels())) {
+    const r = tPlay(m, 2, ok);
+    ok(r.S.phase === "deliver" && r.S.done === "half", "◐◐ " + id + " " + r.S.phase + " " + r.S.done);
+    eq(r.seen, phasesOf(m), "단계 순서 " + id);
+  }
+});
+test("FL-04", "채점하지 않는 입력", (ok, eq) => {
+  const models = tModels(), m = models["sp-6"];
+  let S = fresh(m);
+  S = tSolve(m, S); S = tSolve(m, S);                                    // 출발, 걸음 → 문패 쓰기
+  ok(S.phase === "plate" && !S.flawed, "문패 쓰기로");
+  S = tApply(S, F.confirm(m, S)); ok(!S.flawed && S.tries === 0 && /모두 골라요/.test(S.msg.text), "덜 고르고 확정");
+  S = tApply(S, F.move(m, S, 61)); ok(!S.flawed && S.pen.h === null && /흰 집/.test(S.msg.text), "검은 집을 눌렀다");
+  S = tApply(S, F.move(m, S, 60)); S = tApply(S, F.sign(m, S, 2)); S = tApply(S, F.confirm(m, S));
+  ok(!S.flawed && S.tries === 0 && /이미 달린/.test(S.msg.text), "이미 달린 문패");
+  S = tApply(S, F.move(m, S, 62)); S = tApply(S, F.sign(m, S, 0)); S = tApply(S, F.confirm(m, S));
+  ok(S.phase === "plate" && S.board.length === 2 && /1개 더/.test(S.msg.text), "하나를 달면 남은 수를 말한다");
+  S = tApply(S, F.move(m, S, 64)); S = tApply(S, F.sign(m, S, -2)); S = tApply(S, F.confirm(m, S));
+  ok(S.phase === "deliver" && S.done === "full" && S.board.length === 3, "세 주소를 다 달았다");
+  eq(tK(S.board), ["Cx4", "D4", "Ebb4"], "문패 판");
+  const w = models["sp-2"];
+  let W = fresh(w);
+  ok(!tApply(W, F.confirm(w, W)).flawed && /먼저 골라/.test(tApply(W, F.confirm(w, W)).msg.text), "고르지 않고 출발");
+  const dj = models["sp-5"], D0 = fresh(dj);
+  ok(D0.pos === dj.target && !tApply(D0, F.confirm(dj, D0)).flawed && tApply(D0, F.confirm(dj, D0)).phase === "drop", "처음 자리가 도착 집이어도 고르지 않으면 넘어가지 않는다");
+  ok(F.nudge(w, tApply(W, F.move(w, W, 59)), -1) === null, "창 밖으로 나가지 않는다");
+  W = tSolve(w, W); ok(W.phase === "walk" && /걸어서/.test(tApply(W, F.move(w, W, 66)).msg.text), "걸음 단계에서는 집을 눌러도 옮기지 않는다");
+  let far = W;
+  for (let k = 0; k < 6; k++) far = tApply(far, F.nudge(w, far, 1));
+  ok(far.pos - w.from === MAXA + 1, "걸음은 세 칸까지");
+  const s = models["sp-7"];
+  let Q = fresh(s);
+  Q = tApply(Q, F.confirm(s, Q)); ok(!Q.flawed && /하나 이상/.test(Q.msg.text), "고르지 않고 확정");
+  Q = tApply(Q, F.pick(s, Q, 0)); Q = tApply(Q, F.confirm(s, Q)); ok(Q.flawed && /2통/.test(Q.msg.text) && /1통/.test(Q.msg.text), "덜 고르면 수를 말한다");
+  ok(F.sign(models["d1-03"], Object.assign(fresh(models["d1-03"]), { phase: "plate" }), 2) === null, "아직 배우지 않은 기호는 듣지 않는다");
+});
+test("FL-05", "문구", (ok, eq) => {
+  for (const [id, m] of Object.entries(tModels())) { const c = cardText(m); ok(c.chip.length > 0 && tTokens(c.text), "카드 " + id); }
+  for (const m of Object.values(tModels())) tPlay(m, 0, ok);
+  ok(tTexts().every((t) => t.length > 0 && tTokens(t)), "모든 문구의 주소 토큰");
+  eq(sameKo(["C#4", "Db4"].map(tN)), "⟦C#4⟧는 도에서 반음 위, ⟦Db4⟧는 레에서 반음 아래. 같은 집이에요.", "두 주소의 한 문장");
+  eq([pitchKo(tN("Cx4")), pitchKo(tN("Ebb4")), pitchKo(tN("G4"))], ["도에서 두 반음 위", "미에서 두 반음 아래", "4구역의 솔 집"], "높낮이로 말하기");
+  eq([signKo(1), signKo(-1), signKo(2), signKo(-2), walkKo(tN("Cx4")), walkKo(tN("G4")), sayKo(tN("Bbb3"))], ["샵", "플랫", "더블샵", "더블플랫", "도에서 오른쪽으로 두 칸", "4구역의 솔 집", "B 더블플랫 3"], "낱말");
+  eq(JONG, [..."영일이삼사오육칠팔구"].map((c) => ((c.charCodeAt(0) - 0xAC00) % 28 > 0 ? 1 : 0)), "숫자를 읽은 소리의 받침");
+});
+test("ST-01", "단계 전환은 흐름 그림에 있는 것뿐이다", (ok) => {
+  const NEXT = { start: ["walk"], walk: ["plate", "deliver"], drop: ["plate", "deliver"], plate: ["deliver"], sort: ["deliver"], diag: ["drop"] }, quiet = () => {};
+  for (const [id, m] of Object.entries(tModels())) for (const wrongs of [0, 1, 2]) {
+    const seen = tPlay(m, wrongs, quiet).seen;
+    for (let i = 1; i < seen.length; i++) ok((NEXT[seen[i - 1]] || []).includes(seen[i]), `${id} ${seen[i - 1]} → ${seen[i]}`);
+    ok(seen[seen.length - 1] === "deliver", id + " 끝은 듣기");
+  }
+});
+test("TH-12", "이론 값이 소스에 글자로 적혀 있지 않다", (ok, eq) => {
+  const src = appSource(), KEYS = ["id", "ask", "note", "steps", "show", "plate", "with", "cards", "err", "preview", "final"];
+  ok(!/\b\d{3}\.\d+/.test(src), "주파수의 소수가 없다");
+  eq((src.match(/\b440\b/g) || []).length, 1, "440은 공식 한 곳에만 있다");
+  ok(!/0,\s*2,\s*4,\s*5,\s*7,\s*9,\s*11/.test(src), "자연음 반음값 표가 없다");
+  ok(!/["'`][A-G](?:#|x|b{1,2})?\d["'`]\s*:/.test(src), "주소를 열쇠로 쓴 표가 없다");
+  for (const d of tDays()) for (const j of d.jobs) ok(Object.keys(j).every((k) => KEYS.includes(k)), "씨앗의 열쇠 " + j.id);
+});
+test("CT-01", "문구의 주소는 토큰으로만 적힌다", (ok) => {
+  const texts = tTexts();
+  ok(texts.length > 200, "문구를 모았다: " + texts.length);
+  for (const t of texts) {
+    ok(tTokens(t), "토큰이 주소로 읽힌다: " + t);
+    ok(!/[A-G](?:#|x|b{1,2})?\d/.test(t.replace(/⟦[^⟧]+⟧/g, "")), "토큰 밖에 씨앗 글자가 없다: " + t);
+    if (typeof rich === "function") ok(!/[⟦⟧]/.test(rich(t)) && !/[A-G](?:#|x|b{1,2})\d/.test(rich(t).replace(/<[^>]+>/g, "")), "화면에 토큰과 씨앗 글자가 남지 않는다: " + t);
+  }
+});
+test("CT-03", "금지 표현이 없다", (ok) => {
+  const html = document.documentElement.outerHTML, a = html.indexOf("\n// == 11 TESTS =="), b = html.indexOf("\n// == 12 BOOT =="), page = html.slice(0, a) + html.slice(b);
+  for (const bad of ["병행조", "언제나 같은 주파수", "항상 같은 주파수"]) {
+    ok(!page.includes(bad), "페이지에 없다: " + bad);
+    ok(!tTexts().some((t) => t.includes(bad)), "문구에 없다: " + bad);
+  }
+});
+
+// ── 점검용: 풀린 상태를 띄운다 ──
+function tOpen(id, wrongs) {                                             // 배달을 번호로 연다. wrongs를 주면 그만큼 틀리고 푼 끝 상태까지 간다
+  const d = tDays().find((x) => x.jobs.some((j) => j.id === id));
+  store.hold = true;
+  openRun(d.id, d.jobs.findIndex((j) => j.id === id), [], [], { dev: true });
+  if (wrongs !== undefined) setState(tPlay(M, wrongs, () => {}).S);
+}
+atBoot(55, () => { if (/!$/.test(location.hash) && M) setState(tPlay(M, 0, () => {}).S); });   // 주소 끝이 !면 풀린 상태로 연다(#d3-2!)
+atBoot(91, () => { Object.assign(window.__twn, { open: tOpen, solve: (wrongs) => setState(tPlay(M, wrongs || 0, () => {}).S), texts: tTexts, cards: () => Object.values(tModels()).map((m) => cardText(m).text) }); });
+
+// ── AU 소리: 기록만 하는 가짜 컨텍스트로 본다 ──
+function tAudio() {
+  const log = { osc: [], bursts: 0 };
+  let last = null;
+  const node = (extra) => Object.assign({ connect() {}, addEventListener() {} }, extra);
+  const c = { currentTime: 10, state: "running", sampleRate: 8, baseLatency: 0, destination: node(),
+    createPeriodicWave: () => ({}), createBuffer: (ch, len) => ({ getChannelData: () => new Float32Array(len) }),
+    createBiquadFilter: () => node({ frequency: {}, Q: {} }),
+    createBufferSource() { log.bursts++; return node({ start() {}, stop() {} }); },
+    createGain() {
+      const e = last;                                                    // 발진기 바로 뒤에 만든 게인이 그 음의 크기다
+      last = null;
+      return node({ gain: { value: 0, setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime(v) { if (e) e.peak = Math.max(e.peak, v); } } });
+    },
+    createOscillator() {
+      const e = { freq: null, startAt: null, stopAt: null, calledAt: null, peak: 0, cancels: [] };
+      last = e;
+      return node({ setPeriodicWave() {}, frequency: { setValueAtTime(v) { e.freq = Math.round(v * 100) / 100; } },
+        start(w) { e.startAt = w; e.calledAt = c.currentTime; log.osc.push(e); }, stop(w) { if (w === undefined) e.cancels.push(c.currentTime); else e.stopAt = w; } });
+    },
+    resume: () => Promise.resolve(), addEventListener() {} };
+  return { c, log };
+}
+function tWithAudio(fn, none) {                                          // 가짜 컨텍스트를 끼우고(none이면 소리 없음) 끝나면 상태, 모델, 저장을 되돌린다
+  const a = tAudio(), keepS = Object.assign({}, S), keepM = M, keepHold = store.hold, keepData = JSON.stringify(store.data);
+  painting = false;
+  const back = Snd.swap(none ? null : a.c);
+  try { fn(a.c, a.log); } finally {
+    emit("leave"); back();
+    M = keepM; setState(keepS); store.hold = keepHold; store.data = JSON.parse(keepData);
+    painting = true;
+  }
+}
+const tRound = (x) => Math.round(x * 1000) / 1000;
+test("AU-05", "걸음 소리는 한 걸음에 한 음이고 새 걸음이 앞의 소리를 끊는다", (ok, eq) => {
+  tWithAudio((c, log) => {
+    runFx({ t: "hop", midi: 61 });
+    eq(log.osc.map((e) => [e.freq, tRound(e.startAt - c.currentTime), tRound(e.stopAt - e.startAt), e.peak]), [[277.18, 0.01, 0.27, 0.28]], "한 음: 주파수, 시작, 발진기 길이(0.24 + 0.03), 크기");
+    c.currentTime += 0.1;
+    runFx({ t: "hop", midi: 62 });
+    eq(log.osc.length, 2, "두 번째 걸음"); eq(log.osc[0].cancels.length, 1, "앞의 걸음 소리를 끊는다"); eq(log.osc[1].cancels.length, 0, "새 소리는 남는다");
+    eq(log.osc[1].freq, Math.round(hz(62) * 100) / 100, "주파수는 hz(집 번호)");
+  });
+});
+test("AU-06", "효과음은 잡음이다. 틀렸을 때 집의 소리를 내지 않는다", (ok, eq) => {
+  tWithAudio((c, log) => {
+    runFx({ t: "stamp" }); runFx({ t: "nope" });
+    eq(log.osc.length, 0, "발진기를 만들지 않는다"); eq(log.bursts, 4, "잡음 넷");
+  });
+  let graded = 0;
+  for (const [id, m] of Object.entries(tModels())) {
+    const S2 = tSpoil(m, fresh(m));
+    if (!S2 || !tLastFx.some((f) => f.t === "nope")) continue;
+    graded++;
+    ok(tLastFx.every((f) => f.t === "nope"), "채점한 오답은 아니에요 소리만 낸다 " + id);
+  }
+  ok(graded >= 50, "채점한 오답을 봤다: " + graded);
+});
+test("AU-08", "타이머로 소리를 잇지 않는다", (ok, eq) => {
+  const src = appSource();
+  eq((src.match(/\bsetInterval\b/g) || []).length, 0, "setInterval이 없다");
+  eq((src.match(/\bsetTimeout\b/g) || []).length, 1, "setTimeout은 한 곳뿐이다");
+  ok(/resizeTimer = setTimeout\(/.test(src), "그 한 곳은 화면 크기 변화의 디바운스다");
+});
+const tRel = (log, t0) => log.osc.map((e) => [tRound(e.startAt - t0), tRound(e.stopAt - e.startAt)]);
+test("AU-01", "주파수는 집 번호 하나에서 나온다", (ok, eq) => {
+  tWithAudio((c, log) => {
+    tOpen("sp-3", 0); beginListen();                                     // C♯4 문패가 달린 집에 D♭4를 배달했다
+    eq(log.osc.map((e) => e.freq), [277.18, 277.18, 277.18, 277.18], "C#4와 Db4의 주파수가 같은 수다");
+  });
+  for (const [id, m] of Object.entries(tModels())) tWithAudio((c, log) => {
+    tOpen(id, 0); beginListen();
+    const want = m.hop ? [m.from, m.target] : S.board.map(() => m.target).concat(S.board.length > 1 ? S.board.map(() => m.target) : []);
+    eq(log.osc.map((e) => e.freq), want.map((x) => Math.round(hz(x) * 100) / 100), "듣기의 주파수는 hz(집 번호) " + id);
+  });
+});
+test("AU-02", "듣기는 한 번에 예약한다", (ok, eq) => {
+  const cases = { "sp-1": [[0, 0.65]], "sp-3": [[0, 0.65], [0.8, 0.65], [1.6, 1.13], [1.6, 1.13]], "sp-6": [[0, 0.65], [0.8, 0.65], [1.6, 0.65], [2.4, 1.13], [2.4, 1.13], [2.4, 1.13]], "d0-05": [[0, 0.65], [0.8, 0.65]] };
+  for (const id of Object.keys(cases)) tWithAudio((c, log) => {
+    tOpen(id, 0); beginListen();
+    eq(tRel(log, c.currentTime + 0.15), cases[id], "시작과 발진기 길이 " + id);
+    ok(log.osc.every((e) => e.calledAt === c.currentTime), "모두 한 번에 예약했다 " + id);
+    eq(tRound(run.end - run.t0), tRound(cases[id].length > 2 ? cases[id][cases[id].length - 1][0] + 1.3 : cases[id].length * 0.8 + 0.1), "듣기의 끝 " + id);
+  });
+});
+test("AU-03", "함께 낼 때는 크기를 주소 수로 나눈다", (ok, eq) => {
+  tWithAudio((c, log) => { tOpen("sp-3", 0); beginListen(); eq(log.osc.map((e) => tRound(e.peak)), [0.3, 0.3, 0.15, 0.15], "주소 둘"); });
+  tWithAudio((c, log) => { tOpen("sp-6", 0); beginListen(); eq(log.osc.map((e) => tRound(e.peak)), [0.3, 0.3, 0.3, 0.1, 0.1, 0.1], "주소 셋"); });
+});
+test("AU-04", "새 듣기와 떠나기는 앞선 묶음을 끊는다", (ok, eq) => {
+  tWithAudio((c, log) => {
+    tOpen("sp-3", 0);
+    runFx({ t: "hop", midi: 61 }); beginListen();
+    eq(log.osc[0].cancels.length, 1, "듣기가 시작되면 걸음 소리를 끊는다");
+    c.currentTime += 0.5; beginListen();
+    const first = log.osc.slice(1, 5), second = log.osc.slice(5);
+    ok(first.length === 4 && first.every((e) => e.cancels.length === 1), "다시 듣기는 앞선 묶음의 모든 음을 끊는다");
+    eq(first.filter((e) => e.cancels[0] < e.startAt).length, 3, "아직 시작하지 않은 음 셋은 시작 전에 취소된다");
+    ok(second.length === 4 && second.every((e) => e.cancels.length === 0), "새 묶음은 남는다");
+    openRun("sp", 3, [], [], { dev: true });
+    ok(second.every((e) => e.cancels.length === 1) && run === null, "다른 배달로 가면 남은 음을 끊는다");
+  });
+});
+test("AU-07", "소리가 멈추면 듣기를 멈추고 알린다", (ok, eq) => {
+  const real = nowMs;
+  let ms = 5000;
+  nowMs = () => ms;
+  try {
+    tWithAudio((c, log) => {
+      tOpen("sp-3", 0); beginListen();
+      c.state = "suspended"; onAudioState();
+      ok(run === null && S.lit === -1 && /소리가 멈춰서/.test(S.msg.text), "컨텍스트가 멈추면 듣기를 멈추고 알린다");
+      ok($("soundChip").hidden === false, "소리 켜기가 보인다");
+      c.state = "running"; onAudioState();
+      ok($("soundChip").hidden === true, "돌아오면 소리 켜기가 숨는다");
+      beginListen(); abortRun("hidden");
+      ok(run === null && /화면을 떠나서/.test(S.msg.text), "화면을 떠나면 멈추고 알린다");
+      beginListen(); c.currentTime += 0.2; frame(); ms += 900; frame();
+      ok(run === null && /소리가 멈춰서/.test(S.msg.text), "들리는 시각이 0.8초 넘게 그대로면 멈춘다");
+      beginListen(); ms += 1300; frame();
+      ok(run && run.perf && log.osc.slice(-4).every((e) => e.cancels.length === 1), "소리 시계가 움직이지 않으면 예약을 끊고 화면 시계로 이어 간다");
+    });
+    tWithAudio((c, log) => {                                             // 소리를 쓸 수 없을 때: 화면 시계로 끝까지 돈다
+      tOpen("sp-3", 0); beginListen();
+      const lits = [];
+      for (const t of [0.1, 0.9, 1.7]) { ms = (run.t0 + t) * 1000; frame(); lits.push(S.lit); }
+      eq(lits, [0, 1, 2], "문패가 차례로, 그리고 함께 밝아진다");
+      ms = (run.t0 + 3) * 1000; frame();
+      ok(run === null && S.lit === -1 && /같은 집이에요/.test(S.msg.text), "끝나면 한 문장으로 맺는다");
+      eq(log.osc.length, 0, "소리는 예약하지 않았다");
+    }, true);
+  } finally { nowMs = real; }
+});
+test("ST-04", "듣는 도중에 떠나면 듣기가 남지 않는다", (ok, eq) => {
+  tWithAudio((c, log) => {
+    tOpen("sp-3", 0); beginListen(); c.currentTime += 1; frame();
+    ok(run !== null && S.lit === 1, "듣는 중: 둘째 주소");
+    act(F.confirm(M, S));                                                // 주 단추: 다음 배달
+    ok(run === null && S.lit === -1 && M.job.id === "sp-4" && S.phase === "drop", "다음 배달로 가면 듣기가 빈다");
+    ok(log.osc.every((e) => e.cancels.length === 1), "남은 음을 끊는다");
+    const before = JSON.stringify(S);
+    frame();
+    eq(JSON.stringify(S), before, "남은 프레임 함수가 상태를 바꾸지 않는다");
+    tOpen("sp-3", 0); beginListen(); openRun("d1", 0, [], [], { dev: true });
+    ok(run === null && S.lit === -1 && S.day === "d1", "배달일을 바꿔도 듣기가 빈다");
+    tOpen("sp-9", 0); beginListen(); act(F.confirm(M, S));               // 마지막 배달 뒤
+    ok(run === null && S.screen === "close", "마감으로 가면 듣기가 빈다");
+  });
+});
+function tDay(id, halves) {                                              // 하루를 끝까지 한다. halves: 첫 번째에 ◐로 끝낼 배달의 번호들. 배달이 나온 차례를 돌려준다
+  const order = [];
+  openRun(id, 0, [], [], { dev: false, gained: [], report: null });
+  for (let guard = 0; S.screen !== "close" && guard < 80; guard++) {
+    if (S.screen === "run") {
+      const first = !order.includes(M.job.id);
+      order.push(M.job.id);
+      act(Object.assign({}, tPlay(M, first && halves.includes(queueNow()[S.idx]) ? 1 : 0, () => {}).S, { fx: [] }));   // 듣기 단계의 값을 그대로 넣는다
+    }
+    act({ advance: true });                                              // 다음 배달로. 발견 장면이면 다음 문장으로
+  }
+  return order;
+}
+test("ST-03", "중간 배달로 들어가도 모델을 먼저 만들고 상태를 한 번에 넣는다", (ok, eq) => {
+  tWithAudio(() => {
+    const seen = [], spy = [-1, () => seen.push(M.job.id + " " + S.day + " " + S.idx + " " + S.phase)], blank = (extra) => Object.assign(blankSave(), extra);
+    const every = location.hash === "#test";                             // 배달 전부를 그려 보는 것은 검사 화면(#test)에서만 한다. 평소에는 배달일마다 첫 배달만 그린다
+    store.hold = true;
+    PAINT.unshift(spy);
+    painting = true;                                                     // 이 검사는 화면을 실제로 그려 본다
+    try {
+      for (const d of BOOK) d.jobs.forEach((job, i) => {                 // 바로가기: 어느 배달에서 시작해도 한 번만 그리고, 그릴 때 모델과 상태가 이미 그 배달의 것이다
+        const r = runPatch(d.id, i, [], []), want = fresh(r.m);
+        ok(r.m.job.id === job.id && r.patch.idx === i && Object.keys(want).every((k) => JSON.stringify(r.patch[k]) === JSON.stringify(want[k])), "배달 하나를 여는 값 " + job.id);
+        if (!every && i > 0) return;
+        seen.length = 0;
+        openRun(d.id, i, [], [], { dev: true });
+        eq(seen, [job.id + " " + d.id + " " + i + " " + want.phase], "한 번 그린다 " + job.id);
+        ok(M.job.id === job.id && S.results.length === 0 && $("ask").textContent.length > 0 && $("houses").children.length > 0, "처음 그린 화면 " + job.id);
+      });
+      store.data = blank({ active: { day: "d1", index: 7, results: [1, 2, 1, 1, 2, 1, 1], requeue: [1, 4], gained: ["C1"] } });   // 이어하기: 다시 낸 배달 둘 가운데 둘째
+      seen.length = 0;
+      ok(resume() === true, "하던 배달일을 잇는다");
+      eq(seen, ["d1-05 d1 7 drop"], "이어하기도 한 번만 그린다");
+      eq([S.day, S.idx, S.requeue, S.results.length, S.results[6], S.gained, S.dev], ["d1", 7, [1, 4], 7, { id: "d1-02", done: "full" }, ["C1"], false], "이어서 연 상태");
+    } finally { PAINT.splice(PAINT.indexOf(spy), 1); painting = false; for (const k in built) delete built[k]; }   // 검사가 그린 것은 다음 그리기에서 모두 다시 그린다
+    for (const bad of [{ day: "zz", index: 0, results: [], requeue: [] }, { day: "d1", index: 3, results: [1, 1], requeue: [] }, { day: "d1", index: 2, results: [1, 2], requeue: [] },
+                       { day: "d1", index: 2, results: [1, 3], requeue: [] }, { day: "d1", index: 1, results: [1] }]) {
+      store.data = blank({ active: bad });
+      ok(resume() === false && store.data.active === null, "믿을 수 없는 저장은 잇지 않고 지운다 " + JSON.stringify(bad));
+    }
+    store.data = blank({ active: { day: "d0", index: 7, results: [1, 1, 1, 1, 1, 1, 1], requeue: [], gained: [] } });
+    ok(resume() === true && S.screen === "close" && S.report.stamp === 2 && store.data.active === null && store.data.days.d0.passed, "마지막 배달까지 마치고 나갔으면 바로 마감한다");
+    // 그날의 줄: 다시 내기와 통과
+    eq(queueOf(7, []), [0, 1, 2, 3, 4, 5, 6], "다시 낼 배달이 없는 줄");
+    eq(queueOf(7, [2, 4]), [0, 1, 2, 3, 4, 5, 2, 4, 6], "다시 낼 배달은 마감 배달 앞에 선다");
+    eq([passNeed(7), passNeed(8), passNeed(9)], [6, 7, 8], "통과 기준은 배달 수의 80%(올림)");
+    store.data = blankSave();
+    eq(tDay("d0", [1, 3]), ["d0-01", "d0-02", "d0-03", "d0-04", "d0-05", "d0-06", "d0-02", "d0-04", "d0-07"], "◐로 끝난 배달은 마감 배달 앞에 한 번 더 나온다");
+    eq([S.report.full, S.report.need, S.report.passed, S.report.stamp], [5, 6, false, 0], "다시 낸 배달의 결과는 통과 계산에 넣지 않는다");
+    ok(dayOpen("d0") && !dayOpen("d1"), "통과하지 못하면 다음 배달일이 열리지 않는다");
+    eq(tDay("d0", [6]).length, 7, "마감 배달은 다시 내지 않는다");
+    eq([S.report.full, S.report.passed, S.report.stamp, dayOpen("d1"), dayOpen("d2")], [6, true, 1, true, false], "일곱 건에 여섯이면 통과하고 다음 배달일만 열린다");
+    tDay("d0", []);
+    eq(store.data.days.d0, { passed: true, stamp: 2, runs: 3, best: 7 }, "배달일 기록: 통과, 도장, 횟수, 최고 기록");
+    // 문패, 하던 배달일, 까닭 누계
+    store.data = blankSave();
+    openRun("d1", 0, [], [], { dev: false, gained: [], report: null });
+    act(Object.assign({}, tPlay(M, 0, () => {}).S, { fx: [] }));
+    eq(store.data.active, { day: "d1", index: 1, results: [1], requeue: [], gained: ["C1"] }, "듣기 단계에 들어서면 여기까지 적는다");
+    store.data = blankSave();
+    openRun("d1", 2, [], [], { dev: false, gained: [], report: null });
+    act(Object.assign({}, tPlay(M, 1, () => {}).S, { fx: [] }));
+    eq([store.data.plates, S.gained, S.requeue], [[], [], [2]], "◐로 끝난 배달은 문패를 주지 않고 다시 낼 배달에 넣는다");
+    store.data = blankSave();
+    eq(tDay("d1", [2]).length, 8, "1단에서 하나를 다시 낸다");
+    eq([store.data.plates.length, S.gained.length, store.data.active, store.data.stats], [10, 10, null, { jobs: 8, clean: 7 }], "다시 낸 배달을 한 번에 마치면 그 문패를 얻는다");
+    tDay("d1", []);
+    eq([store.data.plates.length, S.gained.length], [10, 0], "이미 얻은 문패는 다시 세지 않는다");
+    openRun("d0", 0, [], [], { dev: false, gained: [], report: null });
+    act(F.move(M, S, 62)); act(F.confirm(M, S));
+    eq(store.data.causes, { extra: 1 }, "채점한 오답의 까닭을 센다");
+    const before = JSON.stringify(store.data);
+    tOpen("d1-01", 0); act(F.move(M, S, 62)); act(F.confirm(M, S)); act(Object.assign({}, tPlay(M, 0, () => {}).S, { fx: [] })); act({ advance: true });
+    eq(JSON.stringify(store.data), before, "바로가기로 연 배달은 기록하지 않는다");
+  }, true);
+});
+test("CT-02", "내용의 수가 엔진의 값과 같다", (ok, eq) => {
+  eq(DAYS.reduce((s, d) => s + d.jobs.length, 0), 46, "배달 46건");
+  eq(SCENES.map((sc) => sc.id + " " + sc.after), ["S1 d0-04", "S2 d1-02", "S3 d2-01", "S4 d2-03", "S5 d4-05", "S6 d5-07"], "발견 장면 여섯의 자리");
+  const houses = [...Array(12)].map((x, i) => spellingsAt(60 + i)), total = houses.reduce((s, x) => s + x.length, 0), two = houses.filter((x) => x.length === 2);
+  eq([total, houses.filter((x) => x.some((p) => p.a === 0)).length, total - 7], [35, 7, 28], "주소 35개 = 글자 문패 7 + 얻는 문패 28");
+  eq([two.length, tK(two[0])], [1, ["G#4", "Ab4"]], "주소가 둘인 집은 하나뿐이다");
+  const ms = {};
+  for (const sc of SCENES) {
+    const d = sceneDay(sc), m = ms[sc.id] = sceneModel(sc, d), ends = m.hops ? m.hops.flatMap((h) => [h[0], h[0] + h[1]]) : m.board0.flatMap((p) => [midiOf(anchorOf(p)), midiOf(p)]);
+    ok(!!d && !d.jobs.find((j) => j.id === sc.after).final, "마감 배달이 아닌 배달 뒤에 온다 " + sc.id);
+    ok(Object.keys(sc).every((k) => ["id", "title", "after", "names", "house", "hops"].includes(k)), "장면 씨앗의 열쇠 " + sc.id);
+    ok(m.win !== null && ends.every((x) => x >= winLo(m.win) && x <= winHi(m.win)), "그릴 것이 한 창에 들어온다 " + sc.id);
+    ok(m.lines.length >= 2 && m.lines.length <= 3 && m.lines.every((t) => t.length > 0 && tTokens(t)), "문장은 둘이나 셋 " + sc.id);
+    ok(m.board0.every((p) => midiOf(p) === m.target && d.signs.includes(p.a)), "문패는 모두 한 집의 주소이고 배운 기호다 " + sc.id);
+  }
+  eq([ms.S1.hops, ms.S1.glow, ms.S1.tune.mids], [[[60, 1], [64, 1], [69, 1], [71, 1]], [64, 65, 71, 72], [60, 61, 64, 65, 69, 70, 71, 72]], "S1: 한 칸 걸음 넷, 검은 집 없이 이웃한 흰 집 두 쌍");
+  eq(ms.S1.lines[1], "미와 파, 시와 도 사이에는 검은 집이 없어요.", "S1의 흰 집 이름");
+  ok(isEnharmonic(ms.S2.board0[0], ms.S2.board0[1]) && /딴이름한소리/.test(ms.S2.lines[1]), "S2: 두 주소가 딴이름한소리다");
+  eq([tK(ms.S2.board0), tK(ms.S3.board0), tK(ms.S4.board0), tK(ms.S5.board0), tK(ms.S6.board0)], [["C#4", "Db4"], ["E#4", "F4"], ["B#3", "C4"], ["D4", "Cx4", "Ebb4"], ["G#4", "Ab4"]], "장면의 문패");
+  eq(ms.S3.lines, ['샵은 "검은 집"이 아니라 "오른쪽으로 한 칸"이에요.', "미의 오른쪽은 바로 파예요."], "S3의 문장");
+  eq(ms.S4.lines, ["⟦B#3⟧의 3은 출발 집의 구역이에요.", "걸어서 경계를 넘으면 4구역의 집에 닿아요."], "S4의 문장: 숫자와 구역");
+  eq([ms.S5.glow, ms.S5.lines[0]], [[62, 60, 64], "이 집에서 두 칸 안에 흰 집이 셋이에요."], "S5: 흰 집 셋");
+  eq([ms.S6.glow, ms.S6.lines], [[67, 69], ["두 칸 안의 흰 집이 솔과 라 둘뿐이에요.", "열두 집 가운데 이 집만 주소가 둘이라서 주소는 모두 35개예요."]], "S6: 흰 집 둘, 열두 집, 35개");
+  eq([COUNT_KO[ms.S5.board0.length], COUNT_KO[ms.S6.board0.length], MAJOR.reduce((s, x) => s + x, 0)], ["셋", "둘", 12], "문장 속의 수는 엔진이 센 값이다");
+  tWithAudio((c, log) => {                                               // 끼어들기와 들어 보기
+    const play = () => act(Object.assign({}, tPlay(M, 0, () => {}).S, { fx: [] })), next = () => act({ advance: true });
+    store.hold = true; store.data = blankSave();
+    openRun("d0", 3, [], [], { dev: false, gained: [], report: null }); play(); next();
+    ok(S.screen === "scene" && S.scene.id === "S1" && S.scene.line === 0 && S.msg.text === M.lines[0] && S.idx === 3 && S.results.length === 1, "d0-04 뒤에 S1이 끼어든다");
+    beginListen();
+    eq([log.osc.length, tRound(log.osc[7].startAt - log.osc[0].startAt), new Set(log.osc.map((e) => e.startAt)).size], [8, 5.6, 8], "S1의 들어 보기: 여덟 집을 0.8초마다 차례로");
+    next();
+    ok(S.scene.line === 1 && run === null && S.msg.text === M.lines[1] && log.osc.every((e) => e.cancels.length === 1), "다음 문장으로 가면 듣던 것을 멈춘다");
+    next(); ok(S.screen === "scene" && S.scene.line === 2 && store.data.scenes.length === 0, "문장을 하나씩 넘긴다");
+    next(); ok(S.screen === "run" && S.scene === null && M.job.id === "d0-05" && S.idx === 4, "마지막 문장 뒤에 다음 배달로 간다");
+    eq(store.data.scenes, ["S1"], "본 장면을 적는다");
+    openRun("d0", 3, [], [], { dev: false, gained: [], report: null }); play(); next();
+    ok(S.screen === "run" && M.job.id === "d0-05", "본 장면은 다시 끼어들지 않는다");
+    openRun("d1", 6, [1], [], { dev: false, gained: [], report: null }); play(); next();
+    ok(M.job.id === "d1-07" && S.screen === "run" && !store.data.scenes.includes("S2"), "다시 낸 배달 뒤에는 끼어들지 않는다");
+    openScene(SCENES[1], "run"); log.osc.length = 0; beginListen();
+    eq(log.osc.map((e) => [e.freq, tRound(e.startAt - log.osc[0].startAt), e.peak]), [[277.18, 0, 0.3], [277.18, 0.8, 0.3], [277.18, 1.6, 0.15], [277.18, 1.6, 0.15]], "S2의 들어 보기: 두 주소를 차례로, 그리고 함께");
+  });
+});
+atBoot(92, () => { window.__twn.scene = (id, line) => { store.hold = true; openScene(SCENES.find((sc) => sc.id === id), "run"); if (line) setState({ scene: Object.assign({}, S.scene, { line }), msg: say("", M.lines[line]) }); }; });   // 점검용
+const coreBookTest = TESTS.find((t) => t.id === "CT-02"), coreBookFn = coreBookTest.fn;
+coreBookTest.fn = (ok, eq) => { coreBookFn(ok, eq); const rows = bookRows(), all = [...new Set(DAYS.flatMap((d) => d.jobs.flatMap((j) => platesOf(jobModel(j, d)).map(plateKey))))]; eq(rows.reduce((n, r) => n + r.names.length, 0), 35, "주소록의 칸"); eq(rows.flatMap((r) => r.names).filter((p) => ownsPlate(p, [])).length, 7, "처음 문패"); ok(rows.flatMap((r) => r.names).every((p) => ownsPlate(p, all)), "배달일을 마치면 주소록이 찬다"); };
+const coreReviewTest = TESTS.find((t) => t.id === "JB-01"), coreReviewFn = coreReviewTest.fn;
+coreReviewTest.fn = (ok, eq) => {
+  coreReviewFn(ok, eq); eq(reviewMaterial().length, 56, "복습의 재료");
+  for (const cause of ["stay", "dir", "count", "extra", "octave", "letter", "black", "plate", "sort", "cause"]) for (const d of DAYS) for (const date of ["2026-01-01", "2026-11-20", "2027-12-31"]) {
+    const a = reviewPlan({ [cause]: 3 }, d.signs, date), b = reviewPlan({ [cause]: 3 }, d.signs, date);
+    eq(a.day.jobs, b.day.jobs, "같은 씨앗의 복습 " + cause + d.id); eq(a.day.jobs.length, 6, "여섯 통");
+    for (const j of a.day.jobs) { eq(checkJob(jobModel(j, a.day)), [], "복습 제약"); ok(Object.keys(j).every((k) => ["id", "ask", "note", "steps", "show", "plate", "with", "cards", "err", "preview", "final"].includes(k)), "복습 씨앗의 열쇠"); }
+  }
+};
+
+// -- 11 끝 --
+
+// == 12 BOOT ==
+function boot() { BOOT.sort((a, b) => a[0] - b[0]).forEach((b) => b[1]()); render(); }
+// -- 12 끝 --
+boot();
+</script>
+</body>
+</html>

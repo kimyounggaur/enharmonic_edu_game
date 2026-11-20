@@ -1,0 +1,1029 @@
+{
+  "days": [
+    {
+      "id": "d0",
+      "name": "첫 배달",
+      "jobs": [
+        {
+          "id": "d0-01",
+          "mode": "바로 배달",
+          "address": "C4",
+          "from": 60,
+          "target": 60,
+          "window": "B3~C5",
+          "steps": 0,
+          "spellings": [
+            "C4"
+          ],
+          "plates": [],
+          "errors": []
+        },
+        {
+          "id": "d0-02",
+          "mode": "바로 배달",
+          "address": "A4",
+          "from": 69,
+          "target": 69,
+          "window": "B3~C5",
+          "steps": 0,
+          "spellings": [
+            "A4"
+          ],
+          "plates": [],
+          "errors": []
+        },
+        {
+          "id": "d0-03",
+          "mode": "바로 배달",
+          "address": "C5",
+          "from": 72,
+          "target": 72,
+          "window": "B3~C5",
+          "steps": 0,
+          "spellings": [
+            "C5"
+          ],
+          "plates": [],
+          "errors": []
+        },
+        {
+          "id": "d0-04",
+          "mode": "바로 배달",
+          "address": "B3",
+          "from": 59,
+          "target": 59,
+          "window": "B3~C5",
+          "steps": 0,
+          "spellings": [
+            "B3"
+          ],
+          "plates": [],
+          "errors": []
+        },
+        {
+          "id": "d0-05",
+          "mode": "걸음 연습",
+          "address": "E4",
+          "from": 64,
+          "target": 65,
+          "window": "B3~C5",
+          "steps": 1,
+          "spellings": [
+            "F4"
+          ],
+          "plates": [],
+          "errors": []
+        },
+        {
+          "id": "d0-06",
+          "mode": "걸음 연습",
+          "address": "C4",
+          "from": 60,
+          "target": 61,
+          "window": "B3~C5",
+          "steps": 1,
+          "spellings": [],
+          "plates": [],
+          "errors": []
+        },
+        {
+          "id": "d0-07",
+          "mode": "걸음 연습",
+          "address": "C5",
+          "from": 72,
+          "target": 71,
+          "window": "B3~C5",
+          "steps": -1,
+          "spellings": [
+            "B4"
+          ],
+          "plates": [],
+          "errors": []
+        }
+      ]
+    },
+    {
+      "id": "d1",
+      "name": "검은 집의 두 주소",
+      "jobs": [
+        {
+          "id": "d1-01",
+          "mode": "걸어서 배달",
+          "address": "C♯4",
+          "from": 60,
+          "target": 61,
+          "window": "B3~C5",
+          "steps": 1,
+          "spellings": [
+            "C♯4",
+            "D♭4"
+          ],
+          "plates": [
+            "C♯4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d1-02",
+          "mode": "걸어서 배달",
+          "address": "D♭4",
+          "from": 62,
+          "target": 61,
+          "window": "B3~C5",
+          "steps": -1,
+          "spellings": [
+            "C♯4",
+            "D♭4"
+          ],
+          "plates": [
+            "D♭4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d1-03",
+          "mode": "걸어서 배달",
+          "address": "F♯4",
+          "from": 65,
+          "target": 66,
+          "window": "B3~C5",
+          "steps": 1,
+          "spellings": [
+            "F♯4",
+            "G♭4"
+          ],
+          "plates": [
+            "F♯4",
+            "G♭4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d1-04",
+          "mode": "바로 배달",
+          "address": "A♭4",
+          "from": 69,
+          "target": 68,
+          "window": "B3~C5",
+          "steps": -1,
+          "spellings": [
+            "G♯4",
+            "A♭4"
+          ],
+          "plates": [
+            "A♭4",
+            "G♯4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d1-05",
+          "mode": "악보 편지",
+          "address": "E♭4",
+          "from": 64,
+          "target": 63,
+          "window": "B3~C5",
+          "steps": -1,
+          "spellings": [
+            "D♯4",
+            "E♭4"
+          ],
+          "plates": [
+            "E♭4",
+            "D♯4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d1-06",
+          "mode": "우편 분류",
+          "address": "D♭4",
+          "from": 62,
+          "target": 61,
+          "window": "B3~C5",
+          "steps": -1,
+          "spellings": [
+            "C♯4",
+            "D♭4"
+          ],
+          "plates": [
+            "D♭4",
+            "C♯4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d1-07",
+          "mode": "악보 편지",
+          "address": "A♯4",
+          "from": 69,
+          "target": 70,
+          "window": "B3~C5",
+          "steps": 1,
+          "spellings": [
+            "A♯4",
+            "B♭4"
+          ],
+          "plates": [
+            "A♯4",
+            "B♭4"
+          ],
+          "errors": []
+        }
+      ]
+    },
+    {
+      "id": "d2",
+      "name": "흰 집의 숨은 주소",
+      "jobs": [
+        {
+          "id": "d2-01",
+          "mode": "걸어서 배달",
+          "address": "E♯4",
+          "from": 64,
+          "target": 65,
+          "window": "B3~C5",
+          "steps": 1,
+          "spellings": [
+            "F4",
+            "E♯4"
+          ],
+          "plates": [
+            "E♯4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d2-02",
+          "mode": "걸어서 배달",
+          "address": "F♭4",
+          "from": 65,
+          "target": 64,
+          "window": "B3~C5",
+          "steps": -1,
+          "spellings": [
+            "E4",
+            "F♭4"
+          ],
+          "plates": [
+            "F♭4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d2-03",
+          "mode": "걸어서 배달",
+          "address": "B♯3",
+          "from": 59,
+          "target": 60,
+          "window": "B3~C5",
+          "steps": 1,
+          "spellings": [
+            "C4",
+            "B♯3"
+          ],
+          "plates": [
+            "B♯3"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d2-04",
+          "mode": "악보 편지",
+          "address": "C♭4",
+          "from": 60,
+          "target": 59,
+          "window": "B3~C5",
+          "steps": -1,
+          "spellings": [
+            "B3",
+            "C♭4"
+          ],
+          "plates": [
+            "C♭4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d2-05",
+          "mode": "바로 배달",
+          "address": "F4",
+          "from": 65,
+          "target": 65,
+          "window": "B3~C5",
+          "steps": 0,
+          "spellings": [
+            "F4",
+            "E♯4"
+          ],
+          "plates": [
+            "E♯4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d2-06",
+          "mode": "바로 배달",
+          "address": "C4",
+          "from": 60,
+          "target": 60,
+          "window": "B3~C5",
+          "steps": 0,
+          "spellings": [
+            "C4",
+            "B♯3"
+          ],
+          "plates": [
+            "B♯3"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d2-07",
+          "mode": "우편 분류",
+          "address": "C4",
+          "from": 60,
+          "target": 60,
+          "window": "B3~C5",
+          "steps": 0,
+          "spellings": [
+            "C4",
+            "B♯3"
+          ],
+          "plates": [
+            "B♯3"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d2-08",
+          "mode": "악보 편지",
+          "address": "C♭5",
+          "from": 72,
+          "target": 71,
+          "window": "B3~C5",
+          "steps": -1,
+          "spellings": [
+            "B4",
+            "C♭5"
+          ],
+          "plates": [
+            "C♭5"
+          ],
+          "errors": []
+        }
+      ]
+    },
+    {
+      "id": "d3",
+      "name": "두 칸 특급: 더블샵",
+      "jobs": [
+        {
+          "id": "d3-01",
+          "mode": "걸어서 배달",
+          "address": "C𝄪4",
+          "from": 60,
+          "target": 62,
+          "window": "B3~C5",
+          "steps": 2,
+          "spellings": [
+            "D4",
+            "C𝄪4"
+          ],
+          "plates": [
+            "C𝄪4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d3-02",
+          "mode": "걸어서 배달",
+          "address": "F𝄪4",
+          "from": 65,
+          "target": 67,
+          "window": "B3~C5",
+          "steps": 2,
+          "spellings": [
+            "G4",
+            "F𝄪4"
+          ],
+          "plates": [
+            "F𝄪4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d3-03",
+          "mode": "바로 배달",
+          "address": "E𝄪4",
+          "from": 64,
+          "target": 66,
+          "window": "B3~C5",
+          "steps": 2,
+          "spellings": [
+            "F♯4",
+            "G♭4",
+            "E𝄪4"
+          ],
+          "plates": [
+            "E𝄪4",
+            "F♯4",
+            "G♭4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d3-04",
+          "mode": "악보 편지",
+          "address": "D𝄪4",
+          "from": 62,
+          "target": 64,
+          "window": "B3~C5",
+          "steps": 2,
+          "spellings": [
+            "E4",
+            "F♭4",
+            "D𝄪4"
+          ],
+          "plates": [
+            "D𝄪4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d3-05",
+          "mode": "바로 배달",
+          "address": "A4",
+          "from": 69,
+          "target": 69,
+          "window": "B3~C5",
+          "steps": 0,
+          "spellings": [
+            "A4",
+            "G𝄪4"
+          ],
+          "plates": [
+            "G𝄪4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d3-06",
+          "mode": "반송 편지",
+          "address": "A𝄪4",
+          "from": 69,
+          "target": 71,
+          "window": "B3~C5",
+          "steps": 2,
+          "spellings": [
+            "B4",
+            "C♭5",
+            "A𝄪4"
+          ],
+          "plates": [
+            "A𝄪4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d3-07",
+          "mode": "우편 분류",
+          "address": "E4",
+          "from": 64,
+          "target": 64,
+          "window": "B3~C5",
+          "steps": 0,
+          "spellings": [
+            "E4",
+            "F♭4",
+            "D𝄪4"
+          ],
+          "plates": [
+            "D𝄪4",
+            "F♭4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d3-08",
+          "mode": "바로 배달",
+          "address": "B4",
+          "from": 71,
+          "target": 71,
+          "window": "B3~C5",
+          "steps": 0,
+          "spellings": [
+            "B4",
+            "C♭5",
+            "A𝄪4"
+          ],
+          "plates": [
+            "C♭5",
+            "A𝄪4"
+          ],
+          "errors": []
+        }
+      ]
+    },
+    {
+      "id": "d4",
+      "name": "두 칸 특급: 더블플랫",
+      "jobs": [
+        {
+          "id": "d4-01",
+          "mode": "걸어서 배달",
+          "address": "E𝄫4",
+          "from": 64,
+          "target": 62,
+          "window": "B3~C5",
+          "steps": -2,
+          "spellings": [
+            "D4",
+            "C𝄪4",
+            "E𝄫4"
+          ],
+          "plates": [
+            "E𝄫4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d4-02",
+          "mode": "걸어서 배달",
+          "address": "B𝄫4",
+          "from": 71,
+          "target": 69,
+          "window": "B3~C5",
+          "steps": -2,
+          "spellings": [
+            "A4",
+            "G𝄪4",
+            "B𝄫4"
+          ],
+          "plates": [
+            "B𝄫4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d4-03",
+          "mode": "바로 배달",
+          "address": "F𝄫4",
+          "from": 65,
+          "target": 63,
+          "window": "B3~C5",
+          "steps": -2,
+          "spellings": [
+            "D♯4",
+            "E♭4",
+            "F𝄫4"
+          ],
+          "plates": [
+            "F𝄫4",
+            "D♯4",
+            "E♭4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d4-04",
+          "mode": "악보 편지",
+          "address": "A𝄫4",
+          "from": 69,
+          "target": 67,
+          "window": "B3~C5",
+          "steps": -2,
+          "spellings": [
+            "G4",
+            "F𝄪4",
+            "A𝄫4"
+          ],
+          "plates": [
+            "A𝄫4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d4-05",
+          "mode": "바로 배달",
+          "address": "D4",
+          "from": 62,
+          "target": 62,
+          "window": "B3~C5",
+          "steps": 0,
+          "spellings": [
+            "D4",
+            "C𝄪4",
+            "E𝄫4"
+          ],
+          "plates": [
+            "C𝄪4",
+            "E𝄫4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d4-06",
+          "mode": "반송 편지",
+          "address": "G𝄫4",
+          "from": 67,
+          "target": 65,
+          "window": "B3~C5",
+          "steps": -2,
+          "spellings": [
+            "F4",
+            "E♯4",
+            "G𝄫4"
+          ],
+          "plates": [
+            "G𝄫4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d4-07",
+          "mode": "우편 분류",
+          "address": "A4",
+          "from": 69,
+          "target": 69,
+          "window": "A3~B4",
+          "steps": 0,
+          "spellings": [
+            "A4",
+            "G𝄪4",
+            "B𝄫4"
+          ],
+          "plates": [
+            "G𝄪4",
+            "B𝄫4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d4-08",
+          "mode": "바로 배달",
+          "address": "C4",
+          "from": 60,
+          "target": 60,
+          "window": "B3~C5",
+          "steps": 0,
+          "spellings": [
+            "C4",
+            "B♯3",
+            "D𝄫4"
+          ],
+          "plates": [
+            "B♯3",
+            "D𝄫4"
+          ],
+          "errors": []
+        }
+      ]
+    },
+    {
+      "id": "d5",
+      "name": "옥타브 경계 검문소",
+      "jobs": [
+        {
+          "id": "d5-01",
+          "mode": "걸어서 배달",
+          "address": "B𝄪3",
+          "from": 59,
+          "target": 61,
+          "window": "B3~C5",
+          "steps": 2,
+          "spellings": [
+            "C♯4",
+            "D♭4",
+            "B𝄪3"
+          ],
+          "plates": [
+            "B𝄪3"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d5-02",
+          "mode": "걸어서 배달",
+          "address": "C𝄫4",
+          "from": 60,
+          "target": 58,
+          "window": "A3~B4",
+          "steps": -2,
+          "spellings": [
+            "A♯3",
+            "B♭3",
+            "C𝄫4"
+          ],
+          "plates": [
+            "C𝄫4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d5-03",
+          "mode": "바로 배달",
+          "address": "C♯4",
+          "from": 60,
+          "target": 61,
+          "window": "B3~C5",
+          "steps": 1,
+          "spellings": [
+            "C♯4",
+            "D♭4",
+            "B𝄪3"
+          ],
+          "plates": [
+            "C♯4",
+            "D♭4",
+            "B𝄪3"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d5-04",
+          "mode": "우편 분류",
+          "address": "C♯4",
+          "from": 60,
+          "target": 61,
+          "window": "C4~D5",
+          "steps": 1,
+          "spellings": [
+            "C♯4",
+            "D♭4",
+            "B𝄪3"
+          ],
+          "plates": [
+            "C♯4",
+            "D♭4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d5-05",
+          "mode": "반송 편지",
+          "address": "B♯4",
+          "from": 71,
+          "target": 72,
+          "window": "B3~C5",
+          "steps": 1,
+          "spellings": [
+            "C5",
+            "B♯4",
+            "D𝄫5"
+          ],
+          "plates": [
+            "B♯4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d5-06",
+          "mode": "악보 편지",
+          "address": "B♭3",
+          "from": 59,
+          "target": 58,
+          "window": "A3~B4",
+          "steps": -1,
+          "spellings": [
+            "A♯3",
+            "B♭3",
+            "C𝄫4"
+          ],
+          "plates": [
+            "B♭3",
+            "A♯3",
+            "C𝄫4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d5-07",
+          "mode": "바로 배달",
+          "address": "G♯4",
+          "from": 67,
+          "target": 68,
+          "window": "B3~C5",
+          "steps": 1,
+          "spellings": [
+            "G♯4",
+            "A♭4"
+          ],
+          "plates": [
+            "G♯4",
+            "A♭4"
+          ],
+          "errors": []
+        },
+        {
+          "id": "d5-08",
+          "mode": "악보 편지",
+          "address": "C♭5",
+          "from": 72,
+          "target": 71,
+          "window": "B3~C5",
+          "steps": -1,
+          "spellings": [
+            "B4",
+            "C♭5",
+            "A𝄪4"
+          ],
+          "plates": [
+            "C♭5",
+            "A𝄪4"
+          ],
+          "errors": []
+        }
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "id": "S1",
+      "title": "한 칸이 반음",
+      "after": "d0-04",
+      "addresses": [],
+      "lines": [
+        "집과 집 사이 한 칸이 반음이에요.",
+        "미와 파, 시와 도 사이에는 검은 집이 없어요.",
+        "그래도 한 칸이에요."
+      ]
+    },
+    {
+      "id": "S2",
+      "title": "두 주소, 한 집",
+      "after": "d1-02",
+      "addresses": [
+        "C♯4",
+        "D♭4"
+      ],
+      "lines": [
+        "주소는 다른데 집이 같아요.",
+        "이런 이름들을 딴이름한소리라고 해요.",
+        "피아노처럼 조율한 악기에서는 소리도 같아요."
+      ]
+    },
+    {
+      "id": "S3",
+      "title": "기호가 붙어도 흰 집",
+      "after": "d2-01",
+      "addresses": [
+        "E♯4",
+        "F4"
+      ],
+      "lines": [
+        "샵은 \"검은 집\"이 아니라 \"오른쪽으로 한 칸\"이에요.",
+        "미의 오른쪽은 바로 파예요."
+      ]
+    },
+    {
+      "id": "S4",
+      "title": "숫자는 글자를 따라가요",
+      "after": "d2-03",
+      "addresses": [
+        "B♯3",
+        "C4"
+      ],
+      "lines": [
+        "⟦B#3⟧의 3은 출발 집의 구역이에요.",
+        "걸어서 경계를 넘으면 4구역의 집에 닿아요."
+      ]
+    },
+    {
+      "id": "S5",
+      "title": "세 주소",
+      "after": "d4-05",
+      "addresses": [
+        "D4",
+        "C𝄪4",
+        "E𝄫4"
+      ],
+      "lines": [
+        "이 집에서 두 칸 안에 흰 집이 셋이에요.",
+        "흰 집마다 주소가 하나씩 나와요."
+      ]
+    },
+    {
+      "id": "S6",
+      "title": "이 집만 둘",
+      "after": "d5-07",
+      "addresses": [
+        "G♯4",
+        "A♭4"
+      ],
+      "lines": [
+        "두 칸 안의 흰 집이 솔과 라 둘뿐이에요.",
+        "열두 집 가운데 이 집만 주소가 둘이라서 주소는 모두 35개예요."
+      ]
+    }
+  ],
+  "houses": [
+    {
+      "midi": 60,
+      "addresses": [
+        "C4",
+        "B♯3",
+        "D𝄫4"
+      ],
+      "hz": 261.6255653005986
+    },
+    {
+      "midi": 61,
+      "addresses": [
+        "C♯4",
+        "D♭4",
+        "B𝄪3"
+      ],
+      "hz": 277.1826309768721
+    },
+    {
+      "midi": 62,
+      "addresses": [
+        "D4",
+        "C𝄪4",
+        "E𝄫4"
+      ],
+      "hz": 293.6647679174076
+    },
+    {
+      "midi": 63,
+      "addresses": [
+        "D♯4",
+        "E♭4",
+        "F𝄫4"
+      ],
+      "hz": 311.1269837220809
+    },
+    {
+      "midi": 64,
+      "addresses": [
+        "E4",
+        "F♭4",
+        "D𝄪4"
+      ],
+      "hz": 329.6275569128699
+    },
+    {
+      "midi": 65,
+      "addresses": [
+        "F4",
+        "E♯4",
+        "G𝄫4"
+      ],
+      "hz": 349.2282314330039
+    },
+    {
+      "midi": 66,
+      "addresses": [
+        "F♯4",
+        "G♭4",
+        "E𝄪4"
+      ],
+      "hz": 369.9944227116344
+    },
+    {
+      "midi": 67,
+      "addresses": [
+        "G4",
+        "F𝄪4",
+        "A𝄫4"
+      ],
+      "hz": 391.99543598174927
+    },
+    {
+      "midi": 68,
+      "addresses": [
+        "G♯4",
+        "A♭4"
+      ],
+      "hz": 415.3046975799451
+    },
+    {
+      "midi": 69,
+      "addresses": [
+        "A4",
+        "G𝄪4",
+        "B𝄫4"
+      ],
+      "hz": 440
+    },
+    {
+      "midi": 70,
+      "addresses": [
+        "A♯4",
+        "B♭4",
+        "C𝄫5"
+      ],
+      "hz": 466.1637615180899
+    },
+    {
+      "midi": 71,
+      "addresses": [
+        "B4",
+        "C♭5",
+        "A𝄪4"
+      ],
+      "hz": 493.8833012561241
+    }
+  ]
+}
